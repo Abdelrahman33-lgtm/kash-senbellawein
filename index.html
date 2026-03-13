@@ -619,20 +619,52 @@ async function loadFromNeon() {
     return null;
 }
 
+let pendingSync = false;
+
 async function saveToNeon(stateData) {
-    if (!sbClient || !neonAvailable) return;
+    if (!sbClient || !neonAvailable) {
+        pendingSync = true;
+        setSyncStatus('fail', '📴 أوفلاين — محفوظ محلياً');
+        return;
+    }
     setSyncStatus('wait', 'جاري الحفظ...');
     try {
         const { error } = await sbClient
             .from('kash_state')
             .upsert({ id: 1, data: stateData, updated_at: new Date().toISOString() });
         if (error) throw error;
+        pendingSync = false;
         setSyncStatus('ok', '✓ تمت المزامنة ' + new Date().toLocaleTimeString('ar-EG'));
     } catch(e) {
+        pendingSync = true;
         console.warn('⚠️ saveToSupabase:', e.message);
-        setSyncStatus('fail', 'فشل الحفظ');
+        setSyncStatus('fail', '📴 أوفلاين — محفوظ محلياً');
     }
 }
+
+// لما النت يرجع — ارفع تلقائياً
+window.addEventListener('online', async () => {
+    if (!pendingSync) return;
+    setSyncStatus('wait', '🔄 النت رجع — جاري الرفع...');
+    try {
+        await neonInit();
+        if (neonAvailable) {
+            const { error } = await sbClient
+                .from('kash_state')
+                .upsert({ id: 1, data: state, updated_at: new Date().toISOString() });
+            if (error) throw error;
+            pendingSync = false;
+            setSyncStatus('ok', '✅ تمت المزامنة بعد رجوع النت');
+        }
+    } catch(e) {
+        setSyncStatus('fail', 'فشل الرفع — حاول تاني');
+    }
+});
+
+window.addEventListener('offline', () => {
+    neonAvailable = false;
+    setSyncStatus('fail', '📴 النت مقطوع — وضع أوفلاين');
+});
 
 // --- تحديث مؤشر الحالة ---
 function setSyncStatus(type, msg) {
@@ -696,17 +728,12 @@ async function loadInitialState() {
     await neonInit();
     const cloudData = await loadFromNeon();
     if (cloudData) {
-        if ((cloudData.lastSavedTimestamp || 0) > (state.lastSavedTimestamp || 0)) {
-            state = { ...makeDefault(), ...cloudData };
-            if (!state.lines || !state.lines.length) state.lines = makeDefault().lines;
-            try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
-            showNotification('✅ تم التحميل من قاعدة البيانات', 'success');
-        } else {
-            // المحلي أحدث — ارفعه
-            saveToNeon(state);
-        }
+        // السحابة دايماً تغلب — هي المصدر الرسمي للبيانات
+        state = { ...makeDefault(), ...cloudData };
+        if (!state.lines || !state.lines.length) state.lines = makeDefault().lines;
+        try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
         neonAvailable = true;
-        setSyncStatus('ok', '✓ متصل');
+        setSyncStatus('ok', '✓ متصل — بيانات محدّثة');
     } else if (!neonAvailable) {
         // لا يوجد اتصال، نستمر بالمحلي
         setSyncStatus('fail', 'وضع أوفلاين — بيانات محلية');
