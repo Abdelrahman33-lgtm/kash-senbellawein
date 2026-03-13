@@ -285,6 +285,39 @@ select.custom-select option { background-color: #2d2d2d; color: #fff; }
     .btn-glow { padding: 10px 16px; font-size: 13px; }
 }
 
+
+/* ===== Warning Notification ===== */
+.notif.warning {
+    background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(180,83,9,0.95)) !important;
+    border-left: 4px solid #fbbf24 !important;
+}
+
+/* ===== تحسينات شكل الكروت ===== */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 60%);
+    pointer-events: none;
+}
+.line-card {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.line-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(239,68,68,0.2);
+}
+.btn {
+    transition: all .15s ease !important;
+}
+.btn:active {
+    transform: scale(0.96) !important;
+}
     </style>
 
     <!-- Icons -->
@@ -894,6 +927,8 @@ function renderForm() {
                 <option value="warehouse">🏢 توريد للمخزن (من خط)</option>
                 <option value="expense">📉 مصروفات (بتصنيف)</option>
                 <option value="cashwithdraw">💸 سحب نقدي من المخزن (بدون محفظة)</option>
+                <option value="editcash">✏️ تعديل النقدي يدوياً</option>
+                <option value="editline">✏️ تعديل رصيد خط يدوياً</option>
             </select>
             <div id="warehouseLineContainer" style="display:none;" class="mt-2">
                 <select id="warehouseLineSel" class="custom-select">${lineOpts}</select>
@@ -929,6 +964,27 @@ function renderForm() {
                     </div>
                 </div>
             </div>
+            <!-- تعديل النقدي -->
+            <div id="editCashContainer" style="display:none;" class="mt-2 space-y-2">
+                <div class="rounded-xl p-3 text-xs text-yellow-300" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);">
+                    ⚠️ التعديل اليدوي سيسجل في سجل العمليات
+                </div>
+                <div class="flex justify-between text-sm text-gray-400 px-1">
+                    <span>النقدي الحالي:</span>
+                    <span id="currentCashDisplay" class="text-white font-bold">0 ج</span>
+                </div>
+            </div>
+            <!-- تعديل رصيد خط -->
+            <div id="editLineContainer" style="display:none;" class="mt-2 space-y-2">
+                <div class="rounded-xl p-3 text-xs text-yellow-300" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);">
+                    ⚠️ التعديل اليدوي سيسجل في سجل العمليات
+                </div>
+                <select id="editLineSel" class="custom-select">${lineOpts}</select>
+                <div class="flex justify-between text-sm text-gray-400 px-1">
+                    <span>الرصيد الحالي:</span>
+                    <span id="currentLineDisplay" class="text-white font-bold">0 ج</span>
+                </div>
+            </div>
             <input type="number" id="amt"
                 placeholder="💵 المبلغ"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg mt-2">
@@ -948,6 +1004,19 @@ function renderForm() {
                     if (warehouseDiv)    warehouseDiv.style.display    = this.value === 'warehouse'    ? 'block' : 'none';
                     if (expenseDiv)      expenseDiv.style.display      = this.value === 'expense'      ? 'block' : 'none';
                     if (cashWithdrawDiv) cashWithdrawDiv.style.display = this.value === 'cashwithdraw' ? 'block' : 'none';
+                    const editCashDiv = document.getElementById('editCashContainer');
+                    const editLineDiv = document.getElementById('editLineContainer');
+                    if (editCashDiv) {
+                        editCashDiv.style.display = this.value === 'editcash' ? 'block' : 'none';
+                        if (this.value === 'editcash') {
+                            const el = document.getElementById('currentCashDisplay');
+                            if (el) el.textContent = state.cash.toLocaleString() + ' ج';
+                        }
+                    }
+                    if (editLineDiv) {
+                        editLineDiv.style.display = this.value === 'editline' ? 'block' : 'none';
+                        if (this.value === 'editline') updateEditLineDisplay();
+                    }
                 });
             }
             if (amtField)  amtField.addEventListener('input',  calcCashWithdrawCommission);
@@ -1003,9 +1072,12 @@ function doWithdraw() {
     const comm = (amt / 1000) * rate;
     const net  = amt - comm;
 
-    if (line.daily   + amt > DAILY_LIMIT)   return showNotification('❌ تجاوز الحد اليومي (60,000 ج)!', 'error');
-    if (line.monthly + amt > MONTHLY_LIMIT) return showNotification('❌ تجاوز الحد الشهري (200,000 ج)!', 'error');
-    if (state.cash < net)                   return showNotification('❌ النقدي غير كافي في الدرج!', 'error');
+    if (state.cash < net) return showNotification('❌ النقدي غير كافي في الدرج!', 'error');
+
+    // تحذير فقط - لا يمنع العملية
+    let limitWarn = '';
+    if (line.daily + amt > DAILY_LIMIT)   limitWarn = `⚠️ تنبيه: تجاوز الحد اليومي لـ ${line.name} — تمت العملية`;
+    else if (line.monthly + amt > MONTHLY_LIMIT) limitWarn = `⚠️ تنبيه: تجاوز الحد الشهري لـ ${line.name} — تمت العملية`;
 
     line.balance  += amt;
     line.daily    += amt;
@@ -1014,7 +1086,9 @@ function doWithdraw() {
     state.profit  += comm;
 
     addLog('سحب 💳', amt, comm, net, line.name, cust);
+    playSound('success');
     saveState(); renderAll(); checkAlerts();
+    if (limitWarn) showNotification(limitWarn, 'warning');
     showNotification(`✅ تم السحب | العمولة: ${comm.toFixed(2)} ج`, 'success');
 
     const cf = document.getElementById('custName');
@@ -1036,6 +1110,7 @@ function doDeposit() {
     state.cash   += amt;
 
     addLog('إيداع 📥', amt, 0, amt, line.name, '');
+    playSound('success');
     saveState(); renderAll(); checkAlerts();
     showNotification('✅ تم الإيداع', 'success');
     const af = document.getElementById('amt');
@@ -1050,6 +1125,7 @@ function doOther() {
     if (type === 'manager') {
         state.cash += amt;
         addLog('تغذية مدير 🏦', amt, 0, amt, '—', '');
+        playSound('success');
         showNotification('✅ تمت التغذية', 'success');
 
     } else if (type === 'warehouse') {
@@ -1059,6 +1135,7 @@ function doOther() {
         if (line.balance < amt) return showNotification('❌ رصيد الخط غير كافي', 'error');
         line.balance -= amt;
         addLog('توريد مخزن 🏢', amt, 0, amt, line.name, '');
+        playSound('success');
         showNotification('✅ تم التوريد', 'success');
 
     } else if (type === 'expense') {
@@ -1067,6 +1144,7 @@ function doOther() {
         state.cash -= amt;
         state.expenses.push({ id: Date.now(), amount: amt, category: cat, note: '', date: new Date().toISOString() });
         addLog(`مصروفات (${cat}) 📉`, amt, 0, amt, '—', '');
+        playSound('success');
         showNotification('✅ تم تسجيل المصروف', 'success');
 
     } else if (type === 'cashwithdraw') {
@@ -1078,7 +1156,33 @@ function doOther() {
         state.cash   -= net;
         state.profit += comm;
         addLog('سحب نقدي من المخزن 💸', amt, comm, net, '—', cust);
+        playSound('success');
         showNotification(`✅ تم السحب النقدي | العمولة: ${comm.toFixed(2)} ج`, 'success');
+
+    } else if (type === 'editcash') {
+        const oldCash = state.cash;
+        state.cash = amt;
+        addLog(`✏️ تعديل النقدي`, amt, 0, amt, '—', `كان: ${oldCash.toLocaleString()} ج → بقي: ${amt.toLocaleString()} ج`);
+        playSound('success');
+        saveState(); renderAll(); checkAlerts();
+        showNotification(`✅ تم تعديل النقدي: ${oldCash.toLocaleString()} → ${amt.toLocaleString()} ج`, 'success');
+        const af2 = document.getElementById('amt');
+        if (af2) af2.value = '';
+        return;
+
+    } else if (type === 'editline') {
+        const lineIdx2 = parseInt(document.getElementById('editLineSel')?.value);
+        if (isNaN(lineIdx2)) return showNotification('❌ اختر الخط', 'error');
+        const line2 = state.lines[lineIdx2];
+        const oldBal = line2.balance;
+        line2.balance = amt;
+        addLog(`✏️ تعديل رصيد خط`, amt, 0, amt, line2.name, `كان: ${oldBal.toLocaleString()} ج → بقي: ${amt.toLocaleString()} ج`);
+        playSound('success');
+        saveState(); renderAll(); checkAlerts();
+        showNotification(`✅ تعديل ${line2.name}: ${oldBal.toLocaleString()} → ${amt.toLocaleString()} ج`, 'success');
+        const af3 = document.getElementById('amt');
+        if (af3) af3.value = '';
+        return;
     }
 
     saveState(); renderAll(); checkAlerts();
@@ -1525,6 +1629,7 @@ function generatePDF() {
 
 // ==================== Notification ====================
 function showNotification(msg, type = 'success') {
+    if (type === 'error') playSound('error');
     const div = document.createElement('div');
     div.className = `notification ${type}`;
     div.innerHTML = msg.replace(/\n/g, '<br>');
@@ -1550,6 +1655,12 @@ window.addEventListener('load', async () => {
     document.getElementById('adminPasswordInput')?.addEventListener('keypress', e => {
         if (e.key === 'Enter') checkAdminPassword();
     });
+    // صوت النقر على الأزرار
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('button, .tab-btn, .op-tab');
+        if (btn && !btn.disabled) playSound('click');
+    });
+
     document.getElementById('confirmYes')?.addEventListener('click', () => {
         if (typeof confirmCallback === 'function') confirmCallback();
         confirmCallback = null;
@@ -1564,6 +1675,59 @@ window.addEventListener('load', async () => {
 });
 
 // ==================== تصدير الدوال للـ HTML ====================
+// ==================== الأصوات ====================
+function playSound(type) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        if (type === 'success') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(520, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(780, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.22);
+            osc.start(); osc.stop(ctx.currentTime + 0.22);
+        } else if (type === 'warning') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.frequency.setValueAtTime(360, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.28);
+            osc.start(); osc.stop(ctx.currentTime + 0.28);
+        } else if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(900, ctx.currentTime);
+            gain.gain.setValueAtTime(0.06, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+            osc.start(); osc.stop(ctx.currentTime + 0.05);
+        } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(280, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(180, ctx.currentTime + 0.22);
+            gain.gain.setValueAtTime(0.13, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+            osc.start(); osc.stop(ctx.currentTime + 0.3);
+        }
+    } catch(e) {}
+}
+
+function updateEditLineDisplay() {
+    const sel = document.getElementById('editLineSel');
+    const disp = document.getElementById('currentLineDisplay');
+    if (!sel || !disp) return;
+    const idx = parseInt(sel.value);
+    if (!isNaN(idx) && state.lines[idx]) {
+        disp.textContent = state.lines[idx].balance.toLocaleString() + ' ج';
+    }
+    sel.addEventListener('change', () => {
+        const i = parseInt(sel.value);
+        if (!isNaN(i) && state.lines[i]) disp.textContent = state.lines[i].balance.toLocaleString() + ' ج';
+    });
+}
+
 Object.assign(window, {
     checkAuth, logout,
     setOp, calcWithdrawCommission, calcCashWithdrawCommission,
@@ -1574,7 +1738,8 @@ Object.assign(window, {
     checkAdminPassword, closeAdminDashboard, switchAdminTab,
     changeStaffPassword, changeAdminPassword,
     resetCash, showConfirm,
-    exportExcel, generatePDF
+    exportExcel, generatePDF,
+    updateEditLineDisplay
 });
 
     </script>
