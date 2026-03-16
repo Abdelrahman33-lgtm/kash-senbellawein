@@ -129,11 +129,12 @@ body {
 /* ── Glow Button ── */
 .btn-glow {
     background: linear-gradient(145deg, #ef4444, #dc2626);
-    border: none; border-radius: 16px; padding: 12px 24px;
+    border: none; border-radius: 16px; padding: 14px 28px;  /* تكبير الزر */
     font-weight: 700; color: white; cursor: pointer;
     box-shadow: 0 10px 20px -5px rgba(239,68,68,0.5);
     transition: all 0.2s ease;
     font-family: 'Tajawal', sans-serif;
+    font-size: 1.1rem;
 }
 .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -5px rgba(239,68,68,0.7); }
 .btn-glow:active { transform: translateY(0); }
@@ -156,10 +157,11 @@ body {
 /* ── Tabs ── */
 .tab-item {
     background: rgba(255,255,255,0.03);
-    border-radius: 40px; padding: 8px 16px;
+    border-radius: 40px; padding: 12px 20px; /* أكبر */
     font-weight: 600; color: #aaa;
     transition: all 0.3s; cursor: pointer;
     border: 1px solid transparent;
+    font-size: 1.1rem;
 }
 .tab-item.active {
     background: #ef4444; color: white;
@@ -193,7 +195,7 @@ body {
 select.custom-select {
     background-color: #2d2d2d; color: #fff;
     border: 1px solid #ef4444; border-radius: 12px;
-    padding: 10px 12px; outline: none;
+    padding: 12px 16px; outline: none;
     appearance: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat: no-repeat; background-position: left 12px center;
@@ -432,11 +434,10 @@ select.custom-select option { background-color: #2d2d2d; color: #fff; }
             <div id="linesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
         </div>
 
-        <!-- منطقة العمليات + السجل -->
+        <!-- منطقة العمليات + الحاسبة + السجل (تخطيط جديد) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 fade-up">
-
-            <!-- نموذج العمليات -->
-            <div class="lg:col-span-4">
+            <!-- نموذج العمليات (7 أعمدة - أكبر) -->
+            <div class="lg:col-span-7">
                 <div class="neo-card p-6">
                     <div class="flex gap-2 mb-6">
                         <div id="btn_withdraw" onclick="setOp('withdraw')"
@@ -450,27 +451,60 @@ select.custom-select option { background-color: #2d2d2d; color: #fff; }
                 </div>
             </div>
 
-            <!-- سجل العمليات -->
-            <div class="lg:col-span-8">
+            <!-- حاسبة العمولة المستقلة (5 أعمدة) – تظهر فقط في وضع السحب -->
+            <div class="lg:col-span-5" id="calculatorContainer" style="display: none;">
                 <div class="neo-card p-6">
                     <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        <i data-lucide="clock" class="w-5 h-5"></i> سجل العمليات (آخر 50)
+                        <i data-lucide="calculator" class="w-5 h-5 text-yellow-500"></i> حاسبة العمولة
                     </h3>
-                    <div class="table-container">
-                        <table class="w-full text-sm">
-                            <thead class="text-gray-400 border-b border-gray-700">
-                                <tr>
-                                    <th class="p-3">⏰ الوقت</th>
-                                    <th class="p-3">📍 الخط</th>
-                                    <th class="p-3">🏷️ النوع</th>
-                                    <th class="p-3">💵 المبلغ</th>
-                                    <th class="p-3">💰 العمولة</th>
-                                    <th class="p-3">✅ الصافي</th>
-                                </tr>
-                            </thead>
-                            <tbody id="logItems"></tbody>
-                        </table>
+                    <div class="space-y-4">
+                        <input type="number" id="calcAmount"
+                            oninput="updateCalculator()"
+                            placeholder="💵 المبلغ"
+                            class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg">
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400 whitespace-nowrap">عمولة/1000 ج:</label>
+                            <input type="number" id="calcRate"
+                                oninput="updateCalculator()"
+                                value="10"
+                                class="flex-1 p-2 rounded-2xl bg-black/30 border border-white/10 text-green-400 font-bold text-center">
+                        </div>
+                        <div class="bg-black/40 p-4 rounded-2xl space-y-2 border border-yellow-600/30">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">💰 إجمالي العمولة:</span>
+                                <span id="calcComm" class="text-green-400 font-bold">0 ج</span>
+                            </div>
+                            <div class="flex justify-between text-xl">
+                                <span class="text-gray-200">💵 الصافي (المدفوع):</span>
+                                <span id="calcNet" class="text-red-400 font-black">0 ج</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500">⚠️ هذه حاسبة مساعدة فقط، لا تؤثر على العملية. يتم تحديثها تلقائياً من حقل "المبلغ على الخط"، ويمكنك تعديلها يدوياً.</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- سجل العمليات (يمتد على 12 عموداً في سطر جديد) -->
+        </div>
+        <div class="grid grid-cols-1 gap-6 fade-up">
+            <div class="neo-card p-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="clock" class="w-5 h-5"></i> سجل العمليات (آخر 50)
+                </h3>
+                <div class="table-container">
+                    <table class="w-full text-sm">
+                        <thead class="text-gray-400 border-b border-gray-700">
+                            <tr>
+                                <th class="p-3">⏰ الوقت</th>
+                                <th class="p-3">📍 الخط</th>
+                                <th class="p-3">🏷️ النوع</th>
+                                <th class="p-3">💵 المبلغ</th>
+                                <th class="p-3">💰 العمولة</th>
+                                <th class="p-3">✅ الصافي</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logItems"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -604,11 +638,9 @@ let neonAvailable = false;
 
 async function neonInit() {
     try {
-        // تحميل Supabase client
         const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
         sbClient = createClient(SB_URL, SB_KEY);
 
-        // إنشاء الجدول لو مش موجود عبر RPC أو مباشرة
         const { error } = await sbClient
             .from('kash_state')
             .select('id')
@@ -616,7 +648,6 @@ async function neonInit() {
             .maybeSingle();
 
         if (error && error.code === '42P01') {
-            // الجدول مش موجود — ده مش ممكن من client، لازم ينشأ من Supabase SQL editor
             console.warn('⚠️ جدول kash_state غير موجود — أنشئه من Supabase SQL Editor');
             setSyncStatus('fail', 'أنشئ الجدول في Supabase');
             return;
@@ -675,7 +706,6 @@ async function saveToNeon(stateData) {
     }
 }
 
-// لما النت يرجع — ارفع تلقائياً
 window.addEventListener('online', async () => {
     if (!pendingSync) return;
     setSyncStatus('wait', '🔄 النت رجع — جاري الرفع...');
@@ -699,7 +729,6 @@ window.addEventListener('offline', () => {
     setSyncStatus('fail', '📴 النت مقطوع — وضع أوفلاين');
 });
 
-// --- تحديث مؤشر الحالة ---
 function setSyncStatus(type, msg) {
     const dot = document.getElementById('syncDot');
     const txt = document.getElementById('syncText');
@@ -708,7 +737,6 @@ function setSyncStatus(type, msg) {
     txt.textContent = msg;
 }
 
-// ==================== الحالة الافتراضية ====================
 function makeDefault() {
     return {
         cash: 250000,
@@ -736,7 +764,6 @@ let currentOp      = 'withdraw';
 let adminCurrentTab = 'stats';
 let confirmCallback = null;
 
-// ==================== حفظ وتحميل ====================
 function saveState() {
     state.lastSavedTimestamp = Date.now();
     try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
@@ -744,7 +771,6 @@ function saveState() {
 }
 
 async function loadInitialState() {
-    // 1) localStorage أولاً (سريع)
     try {
         const raw = localStorage.getItem(DB_KEY);
         if (raw) {
@@ -756,22 +782,18 @@ async function loadInitialState() {
         state = makeDefault();
     }
 
-    // 2) Neon - تأكد من وجود الجدول ثم حمّل
     setSyncStatus("wait", "جاري الاتصال...");
     await neonInit();
     const cloudData = await loadFromNeon();
     if (cloudData) {
-        // السحابة دايماً تغلب — هي المصدر الرسمي للبيانات
         state = { ...makeDefault(), ...cloudData };
         if (!state.lines || !state.lines.length) state.lines = makeDefault().lines;
         try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
         neonAvailable = true;
         setSyncStatus('ok', '✓ متصل — بيانات محدّثة');
     } else if (!neonAvailable) {
-        // لا يوجد اتصال، نستمر بالمحلي
         setSyncStatus('fail', 'وضع أوفلاين — بيانات محلية');
     } else {
-        // أول مرة: ارفع الحالة الافتراضية
         saveToNeon(state);
         setSyncStatus('ok', '✓ تم إنشاء قاعدة البيانات');
     }
@@ -779,7 +801,6 @@ async function loadInitialState() {
     renderAll();
 }
 
-// ==================== التحقق التلقائي للحدود ====================
 function checkDailyReset() {
     const today = new Date().toDateString();
     if (state.lastDailyReset !== today) {
@@ -808,7 +829,6 @@ function checkAlerts() {
     }
 }
 
-// ==================== المصادقة ====================
 function checkAuth() {
     const code = (document.getElementById('passCode')?.value || '').trim();
     if (code === state.staffPassword) {
@@ -855,7 +875,6 @@ function initParticles() {
     });
 }
 
-// ==================== نموذج العمليات ====================
 function setOp(op) {
     currentOp = op;
     ['btn_withdraw','btn_deposit','btn_other'].forEach(id => {
@@ -864,6 +883,12 @@ function setOp(op) {
     });
     const btn = document.getElementById(`btn_${op}`);
     if (btn) btn.classList.add('active');
+
+    // إظهار أو إخفاء الحاسبة
+    const calcContainer = document.getElementById('calculatorContainer');
+    if (calcContainer) {
+        calcContainer.style.display = (op === 'withdraw') ? 'block' : 'none';
+    }
     renderForm();
 }
 
@@ -881,31 +906,31 @@ function renderForm() {
                 placeholder="👤 اسم العميل"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white focus:border-red-500 outline-none"
                 value="عميل">
-            <input type="number" id="amt"
-                oninput="calcWithdrawCommission()"
-                placeholder="💵 المبلغ"
+            <input type="number" id="amountOnLine"
+                oninput="syncCalculatorWithAmountOnLine()"
+                placeholder="💵 المبلغ على الخط (الرقم الذي سيضاف للخط)"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg font-bold">
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-400 whitespace-nowrap">عمولة/1000 ج:</label>
-                <input type="number" id="commRate"
-                    oninput="calcWithdrawCommission()"
-                    value="10"
-                    class="flex-1 p-2 rounded-2xl bg-black/30 border border-white/10 text-green-400 font-bold text-center">
-            </div>
-            <div class="bg-black/40 p-4 rounded-2xl space-y-2 border border-red-600/30">
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-400">💰 إجمالي العمولة:</span>
-                    <span id="res_comm" class="text-green-400 font-bold">0 ج</span>
-                </div>
-                <div class="flex justify-between text-xl">
-                    <span class="text-gray-200">💵 ادفع للعميل:</span>
-                    <span id="res_net" class="text-red-400 font-black">0 ج</span>
-                </div>
-            </div>
+            <input type="number" id="cashPaid"
+                placeholder="💸 المبلغ النقدي المدفوع (الذي يخرج من الدرج)"
+                class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg font-bold">
             <select id="lineSel" class="custom-select">${lineOpts}</select>
             <button onclick="showConfirm('تأكيد السحب','هل أنت متأكد من إتمام عملية السحب؟',doWithdraw)"
                 class="btn-glow w-full py-4">✅ تنفيذ السحب</button>`;
-        calcWithdrawCommission();
+
+        // إضافة مستمع لتحديث الحاسبة تلقائياً عند تغيير حقل "المبلغ على الخط"
+        setTimeout(() => {
+            const amountOnLineField = document.getElementById('amountOnLine');
+            if (amountOnLineField) {
+                amountOnLineField.addEventListener('input', function() {
+                    const val = parseFloat(this.value);
+                    if (!isNaN(val)) {
+                        const calcAmount = document.getElementById('calcAmount');
+                        if (calcAmount) calcAmount.value = val;
+                        updateCalculator();
+                    }
+                });
+            }
+        }, 200);
 
     } else if (currentOp === 'deposit') {
         form.innerHTML = `
@@ -926,7 +951,7 @@ function renderForm() {
                 <option value="manager">🏦 استلام من المدير</option>
                 <option value="warehouse">🏢 توريد للمخزن (من خط)</option>
                 <option value="expense">📉 مصروفات (بتصنيف)</option>
-                <option value="cashwithdraw">💸 سحب نقدي من المخزن (بدون محفظة)</option>
+                <option value="cashwithdraw">💸 سحب نقدي من المخزن (بدون عمولة)</option>
                 <option value="editcash">✏️ تعديل النقدي يدوياً</option>
                 <option value="editline">✏️ تعديل رصيد خط يدوياً</option>
             </select>
@@ -946,25 +971,8 @@ function renderForm() {
                     placeholder="👤 اسم العميل"
                     class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white"
                     value="عميل">
-                <div class="flex items-center gap-2">
-                    <label class="text-xs text-gray-400 whitespace-nowrap">عمولة/1000 ج:</label>
-                    <input type="number" id="cashWithdrawRate"
-                        oninput="calcCashWithdrawCommission()"
-                        value="10"
-                        class="flex-1 p-2 rounded-2xl bg-black/30 border border-white/10 text-green-400 font-bold text-center">
-                </div>
-                <div class="bg-black/40 p-4 rounded-2xl space-y-2 border border-red-600/30">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-400">💰 إجمالي العمولة:</span>
-                        <span id="cashWithdrawComm" class="text-green-400 font-bold">0 ج</span>
-                    </div>
-                    <div class="flex justify-between text-xl">
-                        <span class="text-gray-200">💵 ادفع للعميل:</span>
-                        <span id="cashWithdrawNet" class="text-red-400 font-black">0 ج</span>
-                    </div>
-                </div>
+                <p class="text-xs text-gray-400">⚠️ سيتم خصم المبلغ كاملاً من النقدي بدون عمولة</p>
             </div>
-            <!-- تعديل النقدي -->
             <div id="editCashContainer" style="display:none;" class="mt-2 space-y-2">
                 <div class="rounded-xl p-3 text-xs text-yellow-300" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);">
                     ⚠️ التعديل اليدوي سيسجل في سجل العمليات
@@ -974,7 +982,6 @@ function renderForm() {
                     <span id="currentCashDisplay" class="text-white font-bold">0 ج</span>
                 </div>
             </div>
-            <!-- تعديل رصيد خط -->
             <div id="editLineContainer" style="display:none;" class="mt-2 space-y-2">
                 <div class="rounded-xl p-3 text-xs text-yellow-300" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);">
                     ⚠️ التعديل اليدوي سيسجل في سجل العمليات
@@ -997,7 +1004,6 @@ function renderForm() {
             const expenseDiv      = document.getElementById('expenseCategoryContainer');
             const cashWithdrawDiv = document.getElementById('cashWithdrawContainer');
             const amtField        = document.getElementById('amt');
-            const rateField       = document.getElementById('cashWithdrawRate');
 
             if (otherType) {
                 otherType.addEventListener('change', function() {
@@ -1019,8 +1025,6 @@ function renderForm() {
                     }
                 });
             }
-            if (amtField)  amtField.addEventListener('input',  calcCashWithdrawCommission);
-            if (rateField) rateField.addEventListener('input', calcCashWithdrawCommission);
         }, 100);
     }
 
@@ -1037,65 +1041,60 @@ function renderForm() {
     }, 200);
 }
 
-function calcWithdrawCommission() {
-    const a = parseFloat(document.getElementById('amt')?.value)      || 0;
-    const r = parseFloat(document.getElementById('commRate')?.value) || 0;
-    const c = (a / 1000) * r;
-    const rc = document.getElementById('res_comm');
-    const rn = document.getElementById('res_net');
-    if (rc) rc.innerText = c.toFixed(2)   + ' ج';
-    if (rn) rn.innerText = (a - c).toFixed(2) + ' ج';
+// دالة حاسبة العمولة المستقلة
+function updateCalculator() {
+    const amt = parseFloat(document.getElementById('calcAmount')?.value) || 0;
+    const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
+    const comm = (amt / 1000) * rate;
+    const net = amt - comm;
+    const commSpan = document.getElementById('calcComm');
+    const netSpan = document.getElementById('calcNet');
+    if (commSpan) commSpan.innerText = comm.toFixed(2) + ' ج';
+    if (netSpan) netSpan.innerText = net.toFixed(2) + ' ج';
 }
 
-function calcCashWithdrawCommission() {
-    const a = parseFloat(document.getElementById('amt')?.value)              || 0;
-    const r = parseFloat(document.getElementById('cashWithdrawRate')?.value) || 0;
-    const c = (a / 1000) * r;
-    const cs = document.getElementById('cashWithdrawComm');
-    const ns = document.getElementById('cashWithdrawNet');
-    if (cs) cs.innerText = c.toFixed(2)   + ' ج';
-    if (ns) ns.innerText = (a - c).toFixed(2) + ' ج';
+// دالة لمزامنة حاسبة العمولة مع حقل "المبلغ على الخط"
+function syncCalculatorWithAmountOnLine() {
+    // هذه الدالة تستدعى من oninput لحقل amountOnLine، ولكننا نستخدم addEventListener بالفعل.
+    // نتركها فارغة لأننا نضبط المستمع مباشرة.
 }
 
-// ==================== العمليات ====================
 function doWithdraw() {
-    const amt     = parseFloat(document.getElementById('amt')?.value);
-    const rate    = parseFloat(document.getElementById('commRate')?.value);
+    const amtOnLine = parseFloat(document.getElementById('amountOnLine')?.value);
+    const cashPaid = parseFloat(document.getElementById('cashPaid')?.value);
     const lineIdx = parseInt(document.getElementById('lineSel')?.value);
     const cust    = (document.getElementById('custName')?.value || 'عميل').trim();
 
-    if (isNaN(amt) || amt <= 0)  return showNotification('❌ المبلغ غير صحيح', 'error');
-    if (isNaN(rate) || rate < 0) return showNotification('❌ نسبة العمولة غير صحيحة', 'error');
-    if (isNaN(lineIdx))          return showNotification('❌ اختر الخط', 'error');
+    if (isNaN(amtOnLine) || amtOnLine <= 0)  return showNotification('❌ المبلغ على الخط غير صحيح', 'error');
+    if (isNaN(cashPaid) || cashPaid <= 0)    return showNotification('❌ المبلغ النقدي المدفوع غير صحيح', 'error');
+    if (isNaN(lineIdx))                       return showNotification('❌ اختر الخط', 'error');
 
     const line = state.lines[lineIdx];
-    const comm = (amt / 1000) * rate;
-    const net  = amt - comm;
+    const comm = amtOnLine - cashPaid;  // العمولة هي الفرق
+    if (comm < 0) return showNotification('❌ المبلغ النقدي لا يمكن أن يكون أكبر من المبلغ على الخط', 'error');
 
-    if (state.cash < net) return showNotification('❌ النقدي غير كافي في الدرج!', 'error');
+    if (state.cash < cashPaid) return showNotification('❌ النقدي غير كافي في الدرج!', 'error');
 
-    // تحذير فقط - لا يمنع العملية
     let limitWarn = '';
-    if (line.daily + amt > DAILY_LIMIT)   limitWarn = `⚠️ تنبيه: تجاوز الحد اليومي لـ ${line.name} — تمت العملية`;
-    else if (line.monthly + amt > MONTHLY_LIMIT) limitWarn = `⚠️ تنبيه: تجاوز الحد الشهري لـ ${line.name} — تمت العملية`;
+    if (line.daily + amtOnLine > DAILY_LIMIT)   limitWarn = `⚠️ تنبيه: تجاوز الحد اليومي لـ ${line.name} — تمت العملية`;
+    else if (line.monthly + amtOnLine > MONTHLY_LIMIT) limitWarn = `⚠️ تنبيه: تجاوز الحد الشهري لـ ${line.name} — تمت العملية`;
 
-    line.balance  += amt;
-    line.daily    += amt;
-    line.monthly  += amt;
-    state.cash    -= net;
+    line.balance  += amtOnLine;
+    line.daily    += amtOnLine;
+    line.monthly  += amtOnLine;
+    state.cash    -= cashPaid;
     state.profit  += comm;
 
-    addLog('سحب 💳', amt, comm, net, line.name, cust);
+    addLog('سحب 💳', amtOnLine, comm, cashPaid, line.name, cust);
     playSound('success');
     saveState(); renderAll(); checkAlerts();
     if (limitWarn) showNotification(limitWarn, 'warning');
     showNotification(`✅ تم السحب | العمولة: ${comm.toFixed(2)} ج`, 'success');
 
-    const cf = document.getElementById('custName');
-    const af = document.getElementById('amt');
-    if (cf) cf.value = '';
-    if (af) af.value = '';
-    calcWithdrawCommission();
+    // تفريغ الحقول
+    document.getElementById('custName').value = '';
+    document.getElementById('amountOnLine').value = '';
+    document.getElementById('cashPaid').value = '';
 }
 
 function doDeposit() {
@@ -1149,15 +1148,11 @@ function doOther() {
 
     } else if (type === 'cashwithdraw') {
         const cust = (document.getElementById('cashWithdrawCustName')?.value || 'عميل').trim();
-        const rate = parseFloat(document.getElementById('cashWithdrawRate')?.value) || 0;
-        const comm = (amt / 1000) * rate;
-        const net  = amt - comm;
-        if (state.cash < net) return showNotification('❌ النقدي غير كافي', 'error');
-        state.cash   -= net;
-        state.profit += comm;
-        addLog('سحب نقدي من المخزن 💸', amt, comm, net, '—', cust);
+        if (state.cash < amt) return showNotification('❌ النقدي غير كافي', 'error');
+        state.cash   -= amt;
+        addLog('سحب نقدي من المخزن 💸', amt, 0, amt, '—', cust);
         playSound('success');
-        showNotification(`✅ تم السحب النقدي | العمولة: ${comm.toFixed(2)} ج`, 'success');
+        showNotification(`✅ تم السحب النقدي بمبلغ ${amt.toFixed(2)} ج`, 'success');
 
     } else if (type === 'editcash') {
         const oldCash = state.cash;
@@ -1201,7 +1196,6 @@ function addLog(type, amount, commission, net, lineName, customer) {
     if (state.logs.length > 200) state.logs.pop();
 }
 
-// ==================== Render ====================
 function renderAll() {
     renderStats();
     renderLines();
@@ -1278,7 +1272,6 @@ function renderLogs() {
         </tr>`).join('');
 }
 
-// ==================== إدارة الخطوط ====================
 function toggleLineManager() {
     const modal = document.getElementById('lineManager');
     if (!modal) return;
@@ -1341,7 +1334,6 @@ function resetLine(i) {
     showNotification(`✅ تم تصفير "${name}" بنجاح`, 'success');
 }
 
-// ==================== يوم جديد ====================
 function openNewDayModal() {
     const modal     = document.getElementById('newDayModal');
     const container = document.getElementById('newDayLinesContainer');
@@ -1381,7 +1373,6 @@ function confirmNewDay() {
     showNotification('✅ بداية يوم جديد بنجاح', 'success');
 }
 
-// ==================== لوحة المدير ====================
 function openAdminPasswordModal() {
     const modal = document.getElementById('adminPasswordModal');
     if (!modal) return;
@@ -1558,7 +1549,6 @@ function renderAdminTab() {
     }
 }
 
-// ==================== كلمات المرور ====================
 function changeStaffPassword() {
     const cur = document.getElementById('currentStaffPass')?.value || '';
     const nw  = document.getElementById('newStaffPass')?.value     || '';
@@ -1591,7 +1581,6 @@ function resetCash() {
     showNotification('✅ تم تصفير النقدي', 'success');
 }
 
-// ==================== Confirm Modal ====================
 function showConfirm(title, message, onConfirm) {
     const te = document.getElementById('confirmTitle');
     const me = document.getElementById('confirmMessage');
@@ -1602,7 +1591,6 @@ function showConfirm(title, message, onConfirm) {
     if (modal) modal.classList.remove('hidden');
 }
 
-// ==================== Export ====================
 function exportExcel() {
     if (!state.logs.length) return showNotification('❌ لا توجد عمليات للتصدير', 'error');
     const data = state.logs.map(l => ({
@@ -1627,7 +1615,6 @@ function generatePDF() {
     showNotification('✅ تم إنشاء PDF', 'success');
 }
 
-// ==================== Notification ====================
 function showNotification(msg, type = 'success') {
     if (type === 'error') playSound('error');
     const div = document.createElement('div');
@@ -1637,25 +1624,20 @@ function showNotification(msg, type = 'success') {
     setTimeout(() => div.remove(), 4200);
 }
 
-// ==================== تهيئة الصفحة ====================
 window.addEventListener('load', async () => {
-    // شاشة الموظف دايماً الأول
     const login = document.getElementById('loginOverlay');
     if (login) login.style.display = 'flex';
     document.getElementById('mainContent')?.classList.add('hidden');
 
-    // تحميل البيانات
     await loadInitialState();
     safeLucide();
 
-    // ربط أحداث
     document.getElementById('passCode')?.addEventListener('keypress', e => {
         if (e.key === 'Enter') checkAuth();
     });
     document.getElementById('adminPasswordInput')?.addEventListener('keypress', e => {
         if (e.key === 'Enter') checkAdminPassword();
     });
-    // صوت النقر على الأزرار
     document.addEventListener('click', e => {
         const btn = e.target.closest('button, .tab-btn, .op-tab');
         if (btn && !btn.disabled) playSound('click');
@@ -1674,8 +1656,6 @@ window.addEventListener('load', async () => {
     document.getElementById('adminPasswordCancel')?.addEventListener('click', closeAdminPasswordModal);
 });
 
-// ==================== تصدير الدوال للـ HTML ====================
-// ==================== الأصوات ====================
 function playSound(type) {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1730,7 +1710,7 @@ function updateEditLineDisplay() {
 
 Object.assign(window, {
     checkAuth, logout,
-    setOp, calcWithdrawCommission, calcCashWithdrawCommission,
+    setOp, updateCalculator, syncCalculatorWithAmountOnLine,
     doWithdraw, doDeposit, doOther,
     toggleLineManager, updateLine, resetLine,
     openNewDayModal, closeNewDayModal, confirmNewDay,
