@@ -859,14 +859,10 @@ body.day-mode .confirm-box {
                     style="background: linear-gradient(145deg, #f59e0b, #d97706);">
                     <i data-lucide="bar-chart-3" class="w-4 h-4"></i> لوحة المدير
                 </button>
-                <button onclick="exportExcel()"
+                <button onclick="logout()" title="تسجيل الخروج"
                     class="btn-glow text-sm py-2 px-4 flex items-center gap-2"
-                    style="background: linear-gradient(145deg, #10b981, #059669);">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Excel
-                </button>
-                <button onclick="logout()"
-                    class="bg-gray-800 hover:bg-gray-700 p-3 rounded-2xl transition">
-                    <i data-lucide="log-out" class="w-5 h-5 text-red-500"></i>
+                    style="background: linear-gradient(145deg, #991b1b, #7f1d1d);">
+                    <i data-lucide="log-out" class="w-4 h-4 text-red-300"></i> خروج
                 </button>
             </div>
         </div>
@@ -912,7 +908,7 @@ body.day-mode .confirm-box {
                     <i data-lucide="calculator" class="w-5 h-5 text-yellow-500"></i> حاسبة العمولة
                 </h3>
                 <div class="space-y-4">
-                    <input type="number" id="calcAmount" oninput="updateCalculator()" placeholder="💵 المبلغ"
+                    <input type="text" inputmode="decimal" id="calcAmount" oninput="formatNumInput(this); updateCalculator()" placeholder="💵 المبلغ"
                         class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg">
                     <div class="flex items-center gap-2">
                         <label class="text-xs text-gray-400 whitespace-nowrap">عمولة/1000 ج:</label>
@@ -964,7 +960,7 @@ body.day-mode .confirm-box {
                     <!-- خانة المبلغ المُسلَّم — الموظف يكتب فيها -->
                     <div>
                         <p class="text-xs text-gray-400 mb-2 font-bold">💸 المبلغ اللي سلّمته للمدير</p>
-                        <input type="number" id="settle_handover"
+                        <input type="text" inputmode="decimal" id="settle_handover" oninput="formatNumInput(this)"
                             placeholder="اكتب المبلغ المُسلَّم للمدير"
                             class="w-full p-3 rounded-2xl bg-black/50 border border-green-600/30 text-white text-lg font-bold focus:border-green-400 focus:outline-none">
                         
@@ -990,20 +986,25 @@ body.day-mode .confirm-box {
     <!-- سجل العمليات -->
     <div class="grid grid-cols-1 gap-6">
         <div class="neo-card p-6">
-            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                <i data-lucide="clock" class="w-5 h-5"></i> سجل العمليات (آخر 50)
-            </h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i data-lucide="clock" class="w-5 h-5"></i> سجل العمليات (سجل اليوم)
+                </h3>
+                <input type="text" id="employeeLogSearch" oninput="renderLogs()" placeholder="🔍 ابحث بالاسم أو النوع..."
+                    class="p-2 rounded-xl bg-black/30 border border-white/10 text-white text-sm w-48 focus:border-blue-500 focus:outline-none">
+            </div>
             <div class="table-container">
                 <table class="w-full text-sm">
                     <thead class="text-gray-400 border-b border-gray-700">
                         <tr>
-                            <th class="p-3">⏰ الوقت</th>
-                            <th class="p-3">👤 العميل</th>
-                            <th class="p-3">📍 الخط</th>
-                            <th class="p-3">🏷️ النوع</th>
-                            <th class="p-3">💵 المبلغ</th>
-                            <th class="p-3">💰 العمولة</th>
-                            <th class="p-3">✅ الصافي</th>
+                            <th class="p-2 text-right whitespace-nowrap">م</th>
+                            <th class="p-2 text-right whitespace-nowrap">⏰ الوقت</th>
+                            <th class="p-2 text-right whitespace-nowrap">👤 العميل</th>
+                            <th class="p-2 text-right whitespace-nowrap">📍 الخط</th>
+                            <th class="p-2 text-right whitespace-nowrap">🏷️ النوع</th>
+                            <th class="p-2 text-right whitespace-nowrap">💵 المبلغ</th>
+                            <th class="p-2 text-right whitespace-nowrap">💰 العمولة</th>
+                            <th class="p-2 text-right whitespace-nowrap">✅ الصافي</th>
                         </tr>
                     </thead>
                     <tbody id="logItems"></tbody>
@@ -1066,9 +1067,9 @@ body.day-mode .confirm-box {
             </div>
             <div>
                 <label class="block text-gray-400 text-xs mb-1">💰 رصيد النقدي الافتتاحي (الدرج)</label>
-                <input type="number" id="newCashAmount"
+                <input type="text" inputmode="decimal" id="newCashAmount" oninput="formatNumInput(this)"
                     class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white"
-                    value="250000" step="1000">
+                    value="250,000">
             </div>
             <div id="newDayLinesContainer" class="space-y-2 max-h-60 overflow-y-auto border border-white/10 p-3 rounded-lg"></div>
             <div class="flex gap-2 pt-3">
@@ -1092,7 +1093,6 @@ body.day-mode .confirm-box {
             <div id="adminTabStats"    onclick="switchAdminTab('stats')"    class="tab-item active">📊 إحصائيات</div>
             <div id="adminTabCharts"   onclick="switchAdminTab('charts')"   class="tab-item">📈 رسوم بيانية</div>
             <div id="adminTabHistory"  onclick="switchAdminTab('history')"  class="tab-item">📅 الهيستوري</div>
-            <div id="adminTabReports"  onclick="switchAdminTab('reports')"  class="tab-item">📑 تقارير</div>
             <div id="adminTabExpenses" onclick="switchAdminTab('expenses')" class="tab-item">💸 مصروفات</div>
             <div id="adminTabMonthly"   onclick="switchAdminTab('monthly')"   class="tab-item">📊 مقارنة شهرية</div>
             <div id="adminTabSettings" onclick="switchAdminTab('settings')" class="tab-item">⚙️ إعدادات</div>
@@ -1360,6 +1360,29 @@ for (let i = 0; i < 8; i++) createLine();
 
 <script>
 'use strict';
+
+// === Number Formatting Utility ===
+function formatNumInput(input) {
+    if (!input.value && input.value !== '0') return;
+    let raw = input.value.replace(/,/g, '').replace(/[^\d.]/g, '');
+    if (!raw) { input.value = ''; return; }
+    let parts = raw.split('.');
+    parts[0] = parseInt(parts[0] || '0').toLocaleString('en-US');
+    input.value = parts.length > 1 ? parts[0] + '.' + parts[1] : parts[0];
+}
+const _origParseFloat = window.parseFloat;
+window.parseFloat = function(val) {
+    if (typeof val === 'string') val = val.replace(/,/g, '');
+    return _origParseFloat(val);
+};
+
+// Force English numerals and formats globally
+const _origNumLoc = Number.prototype.toLocaleString;
+Number.prototype.toLocaleString = function(loc, opts) { return _origNumLoc.call(this, 'en-US', opts); };
+const _origDateLocStr = Date.prototype.toLocaleDateString;
+Date.prototype.toLocaleDateString = function(loc, opts) { return _origDateLocStr.call(this, 'en-GB', Object.assign({hour12: false}, opts)); };
+const _origTimeLocStr = Date.prototype.toLocaleTimeString;
+Date.prototype.toLocaleTimeString = function(loc, opts) { return _origTimeLocStr.call(this, 'en-US', Object.assign({hour12: true}, opts)); };
 
 const DB_KEY        = 'KASH_SENBELLAWEIN_V22';
 const DAILY_LIMIT   = 60000;
@@ -1690,9 +1713,9 @@ function openNewDayModalActual() {
     container.innerHTML = state.lines.map((l, i) => `
         <div class="flex items-center gap-2">
             <span class="text-xs text-gray-400 w-24 truncate">${l.name}</span>
-            <input type="number" id="newLineBalance_${i}"
+            <input type="text" inputmode="decimal" id="newLineBalance_${i}" oninput="formatNumInput(this)"
                 class="w-full p-2 rounded-xl bg-black/30 border border-white/10 text-white"
-                value="${l.balance}">
+                value="${l.balance.toLocaleString('en-US')}">
         </div>`).join('');
     const ci = document.getElementById('newCashAmount');
     if (ci) ci.value = state.cash;
@@ -1743,7 +1766,8 @@ function confirmNewDay() {
         warehouseTotal:  _snapWarehouseTotal,
         totalReceived:   _snapTotalReceived,
         shouldHandover:  _snapShouldHandover,
-        managerTotal:    _snapManagerTotal
+        managerTotal:    _snapManagerTotal,
+        settleHandover:  state.settleHandover || 0
     };
     if (!state.daysHistory) state.daysHistory = [];
     state.daysHistory.unshift(daySnapshot);
@@ -1761,6 +1785,7 @@ function confirmNewDay() {
     state.logs        = [];
     state.expenses    = [];
     state.settleNote  = '';
+    state.settleHandover = 0;
     state.lastDailyReset = new Date().toDateString();
 
     // الكولداون فقط للموظف — المدير يفتح في أي وقت
@@ -1802,10 +1827,10 @@ function renderForm() {
         form.innerHTML = `
             <input type="text" id="custName" placeholder="👤 اسم العميل"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white focus:border-red-500 outline-none" value="عميل">
-            <input type="number" id="amountOnLine" oninput="syncCalcWithLine()"
+            <input type="text" inputmode="decimal" id="amountOnLine" oninput="formatNumInput(this); syncCalcWithLine()"
                 placeholder="💵 المبلغ على الخط"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg font-bold">
-            <input type="number" id="cashPaid"
+            <input type="text" inputmode="decimal" id="cashPaid" oninput="formatNumInput(this)"
                 placeholder="💸 المبلغ النقدي المدفوع (يخرج من الدرج)"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg font-bold">
             <select id="lineSel" class="custom-select">${lineOpts}</select>
@@ -1813,7 +1838,7 @@ function renderForm() {
                 class="btn-glow w-full py-4">✅ تنفيذ السحب</button>`;
     } else if (currentOp === 'deposit') {
         form.innerHTML = `
-            <input type="number" id="amt" placeholder="💵 مبلغ الإيداع"
+            <input type="text" inputmode="decimal" id="amt" oninput="formatNumInput(this)" placeholder="💵 مبلغ الإيداع"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg">
             <select id="lineSel" class="custom-select">${lineOpts}</select>
             <div class="bg-blue-900/20 p-3 rounded-2xl text-xs text-blue-300">
@@ -1830,6 +1855,7 @@ function renderForm() {
                 <option value="warehouse">🏢 توريد للمخزن (من خط)</option>
                 <option value="expense">📉 مصروفات </option>
                 <option value="cashwithdraw">💸 سحب نقدي من المخزن </option>
+                <option value="merchant">🏪 سحب تجار</option>
             </select>
             <div id="warehouseLineContainer" style="display:none;">
                 <select id="warehouseLineSel" class="custom-select">${allLineOpts}</select>
@@ -1848,7 +1874,7 @@ function renderForm() {
                 <!-- بعتلك كاش — اختياري -->
                 <div class="rounded-xl p-3 border border-yellow-600/20 space-y-2" style="background:rgba(245,158,11,0.06);">
                     <p class="text-xs text-yellow-400 font-bold">💸 بعتلك كاش للمخزن (اختياري)</p>
-                    <input type="number" id="cashWithdrawToWarehouse" placeholder="المبلغ المحوّل للمخزن"
+                    <input type="text" inputmode="decimal" id="cashWithdrawToWarehouse" oninput="formatNumInput(this)" placeholder="المبلغ المحوّل للمخزن"
                         class="w-full p-2 rounded-xl bg-black/40 border border-yellow-600/30 text-white text-sm focus:border-yellow-400 focus:outline-none">
                     <input type="text" id="cashWithdrawPhone" placeholder="📱 رقم المحفظه في المخزن"
                         class="w-full p-2 rounded-xl bg-black/40 border border-white/10 text-white text-sm"
@@ -1856,8 +1882,12 @@ function renderForm() {
                     <p class="text-xs text-gray-500">لو كتبت مبلغ هنا — هيتحسب في إجمالي المخزن</p>
                 </div>
             </div>
+            <div id="merchantContainer" style="display:none;" class="space-y-2">
+                <input type="text" id="merchantNameInput" placeholder="👤 اسم التاجر"
+                    class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white mt-2">
+            </div>
 
-            <input type="number" id="amt" placeholder="💵 المبلغ"
+            <input type="text" inputmode="decimal" id="amt" oninput="formatNumInput(this)" placeholder="💵 المبلغ"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg mt-2">
             <button onclick="showConfirm('تأكيد العملية','هل أنت متأكد من تنفيذ هذه العملية؟',doOther)"
                 class="btn-glow w-full py-4 mt-2">✅ تنفيذ العملية</button>`;
@@ -1869,6 +1899,7 @@ function renderForm() {
                     document.getElementById('warehouseLineContainer').style.display   = this.value === 'warehouse'    ? 'block' : 'none';
                     document.getElementById('expenseCategoryContainer').style.display = this.value === 'expense'      ? 'block' : 'none';
                     document.getElementById('cashWithdrawContainer').style.display    = this.value === 'cashwithdraw' ? 'block' : 'none';
+                    document.getElementById('merchantContainer').style.display        = this.value === 'merchant'     ? 'block' : 'none';
 
                 });
             }
@@ -2006,6 +2037,13 @@ function doOther() {
         }
         playSound('success');
         showNotification(`✅ تم السحب ${amt.toLocaleString()} ج${toWarehouse > 0 ? ` — ${toWarehouse.toLocaleString()} ج للمخزن` : ''}`, 'success');
+    } else if (type === 'merchant') {
+        const cust = (document.getElementById('merchantNameInput')?.value || '').trim() || 'تاجر';
+        if (state.cash < amt) return showNotification('❌ النقدي غير كافي', 'error');
+        state.cash -= amt;
+        addLog('سحب تجار 🏪', amt, 0, amt, '—', cust);
+        playSound('success');
+        showNotification(`✅ تم سحب تجار: ${amt.toLocaleString()} ج`, 'success');
     } else if (type === 'editcash') {
         const oldCash = state.cash;
         state.cash = amt;
@@ -2042,7 +2080,7 @@ function addLog(type, amount, commission, net, lineName, customer) {
         type,     customer: customer || '',
         amt: amount, comm: commission || 0, net
     });
-    if (state.logs.length > 200) state.logs.pop();
+    if (state.logs.length > 2000) state.logs.pop();
 }
 
 // ==================== تصفية اليوم ====================
@@ -2284,12 +2322,26 @@ function renderLines() {
 function renderLogs() {
     const tbody = document.getElementById('logItems');
     if (!tbody) return;
-    if (!state.logs.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">لا توجد عمليات</td></tr>';
+    const searchVal = (document.getElementById('employeeLogSearch')?.value || '').toLowerCase().trim();
+    
+    const filteredLogs = state.logs.filter(l => 
+        !searchVal || 
+        (l.customer && l.customer.toLowerCase().includes(searchVal)) || 
+        l.type.includes(searchVal) ||
+        l.line.toLowerCase().includes(searchVal)
+    );
+
+    if (!filteredLogs.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-500">لا توجد عمليات</td></tr>';
         return;
     }
-    tbody.innerHTML = state.logs.slice(0, 50).map(l => `
+    const total = state.logs.length;
+    tbody.innerHTML = filteredLogs.map(l => {
+        const origIndex = state.logs.indexOf(l);
+        const opNum = total - origIndex;
+        return `
         <tr class="border-b border-white/5 hover:bg-white/5">
+            <td class="p-3 text-xs text-gray-500 font-bold">${opNum}</td>
             <td class="p-3 text-xs">
                 <div class="font-bold">${l.time}</div>
                 <div class="text-gray-600 text-xs">${l.date || ''}</div>
@@ -2300,7 +2352,8 @@ function renderLogs() {
             <td class="p-3 font-bold">${l.amt.toLocaleString()}</td>
             <td class="p-3 text-green-400">${(l.comm || 0).toFixed(2)}</td>
             <td class="p-3 text-red-400">${l.net.toLocaleString()}</td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
 }
 
 // ==================== إدارة الخطوط ====================
@@ -2469,11 +2522,13 @@ function renderAdminTab() {
         const bl  = [...state.lines].sort((a, b) => (b.daily + b.monthly) - (a.daily + a.monthly))[0];
         const ml  = state.logs.filter(l => l.type.includes('تغذية مدير'));
         const totalReceived = (state.openingCash || 0) + ml.reduce((a, l) => a + l.amt, 0);
+        const tm = state.logs.filter(l => l.type.includes('سحب تجار')).reduce((a, l) => a + l.amt, 0);
 
         content.innerHTML = `
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">💰 إجمالي السحوبات</p><div class="text-2xl font-bold">${tw.toLocaleString()} ج</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">📥 إجمالي الإيداعات</p><div class="text-2xl font-bold">${td.toLocaleString()} ج</div></div>
+            <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">🏪 سحوبات تجار</p><div class="text-2xl font-bold text-yellow-500">${tm.toLocaleString()} ج</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">📈 المصلحة</p><div class="text-2xl font-bold text-green-400">${state.profit.toLocaleString()} ج</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">🔥 أكثر خط ازدحاماً</p><div class="text-xl font-bold">${bl?.name || '—'}</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">📊 صافي بعد المصروفات</p><div class="text-2xl font-bold ${np >= 0 ? 'text-green-400' : 'text-red-400'}">${np.toLocaleString()} ج</div></div>
@@ -2509,8 +2564,8 @@ function renderAdminTab() {
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div class="bg-black/30 p-3 rounded-xl" style="border:1px solid rgba(59,130,246,0.3)">
-                        <div class="text-xs text-gray-400">💡 المفروض يُسلَّم</div>
-                        <div class="font-bold text-blue-400 text-base">${_sd.shouldHandover.toLocaleString()} ج</div>
+                        <div class="text-xs text-blue-400">💵 المُسلَّم (للمدير)</div>
+                        <div class="font-bold text-blue-400 text-base">${(state.settleHandover || 0).toLocaleString()} ج</div>
                     </div>
                     <div class="bg-black/30 p-3 rounded-xl">
                         <div class="text-xs text-gray-400">📈 المصلحة</div>
@@ -2558,7 +2613,7 @@ function renderAdminTab() {
                 <div class="bg-black/30 rounded-2xl p-4 border border-white/10">
                     <p class="text-xs text-gray-400 mb-2 font-bold">💰 تعديل النقدي في الدرج</p>
                     <div class="flex gap-2">
-                        <input type="number" id="adminEditCash" placeholder="المبلغ الجديد"
+                        <input type="text" inputmode="decimal" id="adminEditCash" oninput="formatNumInput(this)" placeholder="المبلغ الجديد"
                             class="flex-1 p-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-purple-400 focus:outline-none"
                             value="${state.cash}">
                         <button onclick="adminDirectEditCash()"
@@ -2574,7 +2629,7 @@ function renderAdminTab() {
                             ${state.lines.map((l,i) => `<option value="${i}">${l.name} — ${l.balance.toLocaleString()} ج</option>`).join('')}
                         </select>
                         <div class="flex gap-2">
-                            <input type="number" id="adminEditLineAmt" placeholder="الرصيد الجديد"
+                            <input type="text" inputmode="decimal" id="adminEditLineAmt" oninput="formatNumInput(this)" placeholder="الرصيد الجديد"
                                 class="flex-1 p-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:border-purple-400 focus:outline-none">
                             <button onclick="adminDirectEditLine()"
                                 class="btn-glow py-2 px-3 text-xs"
@@ -2647,9 +2702,9 @@ function renderAdminTab() {
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h3 class="text-xl font-bold text-yellow-400">📅 هيستوري الأيام (${state.daysHistory.length} يوم)</h3>
                 <div class="flex gap-2 flex-wrap items-center">
-                    <input type="text" id="histSearchDate" placeholder="🔍 ابحث بتاريخ..."
+                    <input type="text" id="histSearchDate" placeholder="🔍 ابحث باسم عميل أو تاريخ..."
                         oninput="filterHistory(this.value)"
-                        class="p-2 rounded-xl bg-black/40 border border-white/10 text-white text-sm w-40 focus:border-yellow-400 focus:outline-none">
+                        class="p-2 rounded-xl bg-black/40 border border-white/10 text-white text-sm w-56 focus:border-yellow-400 focus:outline-none">
                     <button onclick="exportAllHistoryExcel()" class="btn-glow py-2 px-3 text-xs" style="background:linear-gradient(145deg,#10b981,#059669);">
                         📊 Excel الكل
                     </button>
@@ -2698,6 +2753,10 @@ function renderAdminTab() {
                             <div class="text-xs text-gray-400">💵 افتتاحي</div>
                             <div class="font-bold">${(day.openingCash || 0).toLocaleString()} ج</div>
                         </div>
+                        <div class="bg-black/30 p-3 rounded-xl text-center" style="border:1px solid rgba(59,130,246,0.3)">
+                            <div class="text-xs text-blue-400">💵 المُسلَّم (للمدير)</div>
+                            <div class="font-bold text-blue-400">${(day.settleHandover || 0).toLocaleString()} ج</div>
+                        </div>
                         <div class="bg-black/30 p-3 rounded-xl text-center">
                             <div class="text-xs text-gray-400">✅ إجمالي مستلم</div>
                             <div class="font-bold text-green-400">${(day.totalReceived || day.openingCash || 0).toLocaleString()} ج</div>
@@ -2706,10 +2765,7 @@ function renderAdminTab() {
                             <div class="text-xs text-gray-400">🏢 للمخزن</div>
                             <div class="font-bold text-yellow-400">${(day.warehouseTotal || 0).toLocaleString()} ج</div>
                         </div>
-                        <div class="bg-black/30 p-3 rounded-xl text-center">
-                            <div class="text-xs text-gray-400">💡 المفروض يُسلَّم</div>
-                            <div class="font-bold text-blue-400">${(day.shouldHandover !== undefined ? day.shouldHandover : (day.openingCash||0)).toLocaleString()} ج</div>
-                        </div>
+
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
                         <div class="bg-black/30 p-3 rounded-xl text-center">
@@ -2746,18 +2802,21 @@ function renderAdminTab() {
                     <div>
                         <h5 class="text-sm font-bold text-red-400 mb-2">📋 سجل العمليات (${day.logs.length} عملية)</h5>
                         <div style="max-height:300px; overflow-y:auto;" class="rounded-xl">
-                            <table class="w-full text-xs">
+                            <table class="w-full text-xs text-right">
                                 <thead class="text-gray-500 border-b border-gray-700 sticky top-0 bg-gray-900">
-                                    <tr><th class="p-2">الوقت</th><th class="p-2">الخط</th><th class="p-2">النوع</th><th class="p-2">المبلغ</th><th class="p-2">العمولة</th><th class="p-2">الصافي</th></tr>
+                                    <tr><th class="p-2">م</th><th class="p-2">الوقت</th><th class="p-2">الخط</th><th class="p-2">العميل</th><th class="p-2">النوع</th><th class="p-2">المبلغ</th><th class="p-2">العمولة</th><th class="p-2">الصافي</th></tr>
                                 </thead>
                                 <tbody>
-                                    ${day.logs.map(l => `
-                                    <tr class="border-b border-white/5 hover:bg-white/5">
-                                        <td class="p-2">${l.time}</td><td class="p-2">${l.line}</td><td class="p-2">${l.type}</td>
-                                        <td class="p-2 font-bold">${l.amt.toLocaleString()}</td>
-                                        <td class="p-2 text-green-400">${(l.comm || 0).toFixed(2)}</td>
-                                        <td class="p-2 text-red-400">${l.net.toLocaleString()}</td>
-                                    </tr>`).join('')}
+                                    ${day.logs.map((l, i) => {
+                                        const opNum = day.logs.length - i;
+                                        return `<tr class="border-b border-white/5 hover:bg-white/5 log-row">
+                                            <td class="p-2 text-gray-500 font-bold">${opNum}</td>
+                                            <td class="p-2">${l.time}</td><td class="p-2">${l.line}</td><td class="p-2 font-bold text-yellow-300">${l.customer || '—'}</td><td class="p-2">${l.type}</td>
+                                            <td class="p-2 font-bold">${l.amt.toLocaleString()}</td>
+                                            <td class="p-2 text-green-400">${(l.comm || 0).toFixed(2)}</td>
+                                            <td class="p-2 text-red-400">${l.net.toLocaleString()}</td>
+                                        </tr>`;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
@@ -3332,9 +3391,41 @@ function filterHistory(query) {
     const list = document.getElementById('historyList');
     if (!list) return;
     const items = list.querySelectorAll('.history-day-card');
+    
     items.forEach(card => {
         const dateText = card.querySelector('.hist-date-text')?.textContent?.toLowerCase() || '';
-        card.style.display = (!q || dateText.includes(q)) ? '' : 'none';
+        const bodyContent = card.querySelector('.history-day-body')?.textContent?.toLowerCase() || '';
+        
+        if (dateText.includes(q) || bodyContent.includes(q)) {
+            card.style.display = 'block';
+            const logRows = card.querySelectorAll('.log-row');
+            let hasMatch = false;
+            
+            if (q) {
+                logRows.forEach(row => {
+                    if (row.textContent.toLowerCase().includes(q)) {
+                        row.style.display = 'table-row';
+                        hasMatch = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Keep expanded during search if there's a match explicitly inside
+                if (hasMatch && !dateText.includes(q)) {
+                    card.querySelector('.history-day-body')?.classList.add('open');
+                    const arrow = card.querySelector('svg polyline');
+                    if (arrow && arrow.parentElement) arrow.parentElement.style.transform = 'rotate(180deg)';
+                }
+            } else {
+                logRows.forEach(row => row.style.display = 'table-row');
+                card.querySelector('.history-day-body')?.classList.remove('open');
+                const arrow = card.querySelector('svg polyline');
+                if (arrow && arrow.parentElement) arrow.parentElement.style.transform = 'rotate(0deg)';
+            }
+        } else {
+            card.style.display = 'none';
+        }
     });
 }
 
