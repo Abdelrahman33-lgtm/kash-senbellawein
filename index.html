@@ -937,6 +937,16 @@
             filter: grayscale(0.5);
         }
 
+        /* زرار بداية اليوم — تأثير نبض لما يكون ظاهر */
+        #btnNewDay {
+            animation: newDayPulse 2.5s ease-in-out infinite;
+            transition: opacity 0.3s;
+        }
+        @keyframes newDayPulse {
+            0%, 100% { box-shadow: 0 0 18px rgba(124,58,237,0.5); }
+            50%       { box-shadow: 0 0 38px rgba(124,58,237,1), 0 0 70px rgba(124,58,237,0.4); }
+        }
+
         /* تصفية اليوم */
         .settle-card {
             background: rgba(16, 185, 129, 0.05);
@@ -1424,6 +1434,12 @@
                 <!-- أزرار الهيدر -->
                 <div class="flex gap-2 flex-wrap items-center">
                     <div class="theme-toggle-btn" onclick="toggleTheme()" title="تبديل الوضع"></div>
+                    <!-- زرار بداية اليوم — بارز في الهيدر -->
+                    <button id="btnNewDay" onclick="openNewDayFlow()"
+                        class="btn-glow text-sm py-2 px-5 flex items-center gap-2"
+                        style="background: linear-gradient(145deg, #7c3aed, #5b21b6); box-shadow: 0 0 18px rgba(124,58,237,0.5); font-size:1rem;">
+                        <i data-lucide="calendar-plus" class="w-4 h-4"></i> 🌅 بداية يوم
+                    </button>
                     <button onclick="toggleLineManager()" class="btn-glow text-sm py-2 px-4 flex items-center gap-2"
                         style="background: linear-gradient(145deg, #3b82f6, #2563eb);">
                         <i data-lucide="settings" class="w-4 h-4"></i> إدارة الخطوط
@@ -1560,6 +1576,41 @@
                             style="background: linear-gradient(145deg, #10b981, #059669);">
                             💾 حفظ
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة التعديل المباشر -->
+        <div class="neo-card p-5 mb-8" style="border:1px solid rgba(251,191,36,0.25);">
+            <h3 class="text-base font-bold mb-4 flex items-center gap-2 text-yellow-400">
+                <i data-lucide="edit-3" class="w-5 h-5"></i> &#9999; تعديل مباشر (كاش / خط)
+                <span class="text-xs text-gray-500 font-normal mr-2">&#8212; يُسجَّل في السجل تلقائياً</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-black/30 rounded-2xl p-4 border border-yellow-600/20">
+                    <p class="text-xs text-gray-400 mb-2 font-bold">&#128181; تعديل النقدي في الدرج</p>
+                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditCashCurrent" class="text-yellow-400 font-bold">&#8212;</span></p>
+                    <div class="flex gap-2">
+                        <input type="text" inputmode="decimal" id="quickEditCashInput" oninput="formatNumInput(this)"
+                            placeholder="الرقم الجديد"
+                            class="flex-1 p-2 rounded-xl bg-black/40 border border-yellow-600/30 text-white text-sm focus:border-yellow-400 focus:outline-none">
+                        <button onclick="quickEditCash()"
+                            class="btn-glow py-2 px-4 text-sm"
+                            style="background:linear-gradient(145deg,#d97706,#b45309);">تعديل</button>
+                    </div>
+                </div>
+                <div class="bg-black/30 rounded-2xl p-4 border border-blue-600/20">
+                    <p class="text-xs text-gray-400 mb-2 font-bold">&#128241; تعديل رصيد خط</p>
+                    <select id="quickEditLineSel" class="custom-select mb-2 text-sm" onchange="updateQuickLineDisplay()"></select>
+                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditLineCurrent" class="text-blue-400 font-bold">&#8212;</span></p>
+                    <div class="flex gap-2">
+                        <input type="text" inputmode="decimal" id="quickEditLineInput" oninput="formatNumInput(this)"
+                            placeholder="الرصيد الجديد"
+                            class="flex-1 p-2 rounded-xl bg-black/40 border border-blue-600/30 text-white text-sm focus:border-blue-400 focus:outline-none">
+                        <button onclick="quickEditLine()"
+                            class="btn-glow py-2 px-4 text-sm"
+                            style="background:linear-gradient(145deg,#2563eb,#1d4ed8);">تعديل</button>
                     </div>
                 </div>
             </div>
@@ -1981,7 +2032,7 @@
         const MONTHLY_LIMIT = 200000;
         const ALERT_BALANCE = 55000;
         const MAX_LINES = 999;
-        const NEWDAY_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 ساعة
+        const NEWDAY_COOLDOWN_MS = 20 * 60 * 60 * 1000; // 20 ساعة
 
         const DEFAULT_STAFF_PASS = '0000';
         const DEFAULT_ADMIN_PASS = '1234';
@@ -1998,18 +2049,26 @@
         // ==================== Supabase ====================
         async function neonInit() {
             try {
-                const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-                sbClient = createClient(SB_URL, SB_KEY);
-                const { error } = await sbClient.from('kash_state').select('id').eq('id', 1).maybeSingle();
+                if (!sbClient) {
+                    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+                    sbClient = createClient(SB_URL, SB_KEY);
+                }
+                const { data, error } = await sbClient.from('kash_state').select('id').eq('id', 1).maybeSingle();
                 if (error && error.code === '42P01') {
-                    setSyncStatus('fail', 'أنشئ الجدول في Supabase');
+                    // الجدول مش موجود — حاول تنشئه
+                    setSyncStatus('fail', 'جدول kash_state غير موجود في Supabase');
+                    neonAvailable = false;
                     return;
+                }
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
                 }
                 neonAvailable = true;
                 setSyncStatus('ok', '✓ متصل بـ Supabase');
             } catch (e) {
                 neonAvailable = false;
-                setSyncStatus('fail', 'وضع أوفلاين — بيانات محلية');
+                sbClient = null; // reset عشان يعيد init في المرة الجاية
+                setSyncStatus('fail', '📴 أوفلاين — بيانات محلية');
             }
         }
 
@@ -2018,7 +2077,17 @@
             try {
                 const { data, error } = await sbClient.from('kash_state').select('data').eq('id', 1).maybeSingle();
                 if (error) throw error;
-                if (data && data.data) return typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                if (data && data.data) {
+                    let parsed = data.data;
+                    // قد يكون string مزدوج (string of string)
+                    if (typeof parsed === 'string') {
+                        try { parsed = JSON.parse(parsed); } catch(e2) {}
+                    }
+                    if (typeof parsed === 'string') {
+                        try { parsed = JSON.parse(parsed); } catch(e3) {}
+                    }
+                    return parsed && typeof parsed === 'object' ? parsed : null;
+                }
             } catch (e) {
                 neonAvailable = false;
                 setSyncStatus('fail', 'فشل التحميل');
@@ -2032,27 +2101,55 @@
                 setSyncStatus('fail', '📴 أوفلاين — محفوظ محلياً');
                 return;
             }
+            // تأكد دائماً إن الداتا string
+            const dataStr = typeof stateData === 'string' ? stateData : JSON.stringify(stateData);
             setSyncStatus('wait', 'جاري الحفظ...');
             try {
-                const { error } = await sbClient.from('kash_state').upsert({ id: 1, data: stateData, updated_at: new Date().toISOString() });
+                const { error } = await sbClient.from('kash_state').upsert(
+                    { id: 1, data: dataStr, updated_at: new Date().toISOString() },
+                    { onConflict: 'id' }
+                );
                 if (error) throw error;
                 pendingSync = false;
+                state.lastSavedTimestamp = state.lastSavedTimestamp || Date.now();
                 setSyncStatus('ok', '✓ تمت المزامنة ' + new Date().toLocaleTimeString('ar-EG'));
             } catch (e) {
                 pendingSync = true;
-                setSyncStatus('fail', '📴 أوفلاين — محفوظ محلياً');
+                neonAvailable = false;
+                setSyncStatus('fail', '📴 خطأ في الرفع — محفوظ محلياً');
+                // retry بعد 5 ثواني
+                clearTimeout(_saveRetryTimer);
+                _saveRetryTimer = setTimeout(async () => {
+                    try {
+                        await neonInit();
+                        if (neonAvailable) {
+                            const latest = localStorage.getItem(DB_KEY);
+                            if (latest) {
+                                const { error: e2 } = await sbClient.from('kash_state').upsert(
+                                    { id: 1, data: latest, updated_at: new Date().toISOString() },
+                                    { onConflict: 'id' }
+                                );
+                                if (!e2) { pendingSync = false; setSyncStatus('ok', '✓ تمت المزامنة (retry)'); }
+                                else { pendingSync = true; }
+                            }
+                        }
+                    } catch(re) {}
+                }, 5000);
             }
         }
 
         window.addEventListener('online', async () => {
-            if (!pendingSync) return;
             setSyncStatus('wait', '🔄 النت رجع — جاري الرفع...');
             try {
                 await neonInit();
                 if (neonAvailable) {
-                    await sbClient.from('kash_state').upsert({ id: 1, data: state, updated_at: new Date().toISOString() });
-                    pendingSync = false;
-                    setSyncStatus('ok', '✅ تمت المزامنة بعد رجوع النت');
+                    const latest = localStorage.getItem(DB_KEY) || JSON.stringify(state);
+                    const { error } = await sbClient.from('kash_state').upsert(
+                        { id: 1, data: latest, updated_at: new Date().toISOString() },
+                        { onConflict: 'id' }
+                    );
+                    if (!error) { pendingSync = false; setSyncStatus('ok', '✅ تمت المزامنة بعد رجوع النت'); }
+                    else { pendingSync = true; setSyncStatus('fail', 'فشل الرفع'); }
                 }
             } catch (e) { setSyncStatus('fail', 'فشل الرفع'); }
         });
@@ -2109,10 +2206,31 @@
         let adminCurrentTab = 'stats';
         let confirmCallback = null;
 
+        // ==================== حفظ موثوق مع Queue ====================
+        let _saveQueue = null;
+        let _saveInProgress = false;
+        let _saveRetryTimer = null;
+
         function saveState() {
             state.lastSavedTimestamp = Date.now();
-            try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch (e) { }
-            saveToNeon(state);
+            const snapshot = JSON.stringify(state);
+            try { localStorage.setItem(DB_KEY, snapshot); } catch (e) { }
+            // ضع في Queue — لو فيه حفظ جاري، الأحدث يستبدله
+            _saveQueue = snapshot;
+            if (!_saveInProgress) _flushSaveQueue();
+        }
+
+        async function _flushSaveQueue() {
+            if (!_saveQueue) return;
+            _saveInProgress = true;
+            const snap = _saveQueue;
+            _saveQueue = null;
+            try {
+                await saveToNeon(snap);
+            } catch(e) {}
+            _saveInProgress = false;
+            // لو في قيمة جديدة في الـ queue، احفظها
+            if (_saveQueue) _flushSaveQueue();
         }
 
         function fixState(s) {
@@ -2129,34 +2247,49 @@
         }
 
         async function loadInitialState() {
+            // أولاً: حمّل من localStorage (فوري)
             try {
                 const raw = localStorage.getItem(DB_KEY);
                 if (raw) {
-                    state = fixState({ ...makeDefault(), ...JSON.parse(raw) });
+                    const parsed = JSON.parse(raw);
+                    state = fixState({ ...makeDefault(), ...parsed });
                 }
             } catch (e) { state = makeDefault(); }
 
+            // ثانياً: حاول الاتصال بـ Supabase
             setSyncStatus('wait', 'جاري الاتصال...');
-            await neonInit();
-            const cloudData = await loadFromNeon();
-            if (cloudData) {
+            try {
+                await neonInit();
+            } catch(e) {}
+
+            let cloudData = null;
+            try {
+                cloudData = await loadFromNeon();
+            } catch(e) {}
+
+            if (cloudData && typeof cloudData === 'object') {
                 const localTs = state.lastSavedTimestamp || 0;
                 const cloudTs = cloudData.lastSavedTimestamp || 0;
                 if (cloudTs >= localTs) {
                     state = fixState({ ...makeDefault(), ...cloudData });
                     try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch (e) { }
-                    setSyncStatus('ok', '✓ متصل — بيانات محدّثة');
+                    setSyncStatus('ok', '✓ متصل — بيانات محدّثة من السحابة');
                 } else {
-                    saveToNeon(state);
-                    setSyncStatus('wait', 'جاري رفع بيانات أحدث...');
+                    // البيانات المحلية أحدث — ارفعها
+                    const snap = JSON.stringify(state);
+                    saveToNeon(snap);
+                    setSyncStatus('ok', '✓ رُفعت البيانات المحلية الأحدث');
                 }
             } else if (!neonAvailable) {
-                setSyncStatus('fail', 'وضع أوفلاين — بيانات محلية');
+                setSyncStatus('fail', '📴 وضع أوفلاين — بيانات محلية');
+                pendingSync = true;
             } else {
-                saveToNeon(state);
-                setSyncStatus('ok', '✓ تم إنشاء قاعدة البيانات');
+                // أول مرة — ارفع البيانات الافتراضية
+                saveToNeon(JSON.stringify(state));
+                setSyncStatus('ok', '✓ تم تهيئة قاعدة البيانات');
             }
-            // تصفير تلقائي بعد تحميل البيانات مباشرة
+
+            // تصفير تلقائي بعد تحميل البيانات
             checkDailyReset();
             checkMonthlyReset();
             renderAll();
@@ -2254,35 +2387,93 @@
             const btn = document.getElementById('btnNewDay');
             if (!btn) return;
             if (canStartNewDay()) {
+                btn.style.display = '';      // أظهر الزرار
                 btn.classList.remove('btn-cooldown');
                 btn.removeAttribute('title');
             } else {
-                btn.classList.add('btn-cooldown');
-                btn.title = `متاح بعد ${remainingCooldown()}`;
+                btn.style.display = 'none'; // اخفي الزرار تماماً عند الموظف
             }
         }
-        setInterval(updateNewDayBtn, 60000);
+        setInterval(updateNewDayBtn, 10000); // كل 10 ثواني عشان يظهر تاني بسرعة
         // تحقق من التصفير كل ساعة لو الموقع فاتح
         setInterval(() => {
             checkDailyReset();
             checkMonthlyReset();
         }, 60 * 60 * 1000);
 
+        // ===== مزامنة كل ثانية: لو فيه pending ارفع + حفظ محلي دوري =====
+        setInterval(async () => {
+            // حفظ محلي دوري كل ثانية (ضمان بيانات حتى لو اللاب قفل)
+            try {
+                const snap = JSON.stringify(state);
+                localStorage.setItem(DB_KEY, snap);
+            } catch(e) {}
+
+            // لو فيه sync معلق وفيه اتصال، ارفع
+            if (pendingSync && navigator.onLine) {
+                try {
+                    if (!neonAvailable) await neonInit();
+                    if (neonAvailable && sbClient) {
+                        const latest = localStorage.getItem(DB_KEY);
+                        if (latest) {
+                            const { error } = await sbClient.from('kash_state').upsert(
+                                { id: 1, data: latest, updated_at: new Date().toISOString() },
+                                { onConflict: 'id' }
+                            );
+                            if (!error) {
+                                pendingSync = false;
+                                setSyncStatus('ok', '✓ تمت المزامنة ' + new Date().toLocaleTimeString('ar-EG'));
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+        }, 1000);
+
+        // ===== فحص حالة الاتصال كل 30 ثانية وإعادة المزامنة إذا لزم =====
+        setInterval(async () => {
+            if (!navigator.onLine) {
+                neonAvailable = false;
+                setSyncStatus('fail', '📴 لا يوجد إنترنت');
+                return;
+            }
+            if (!neonAvailable && sbClient) {
+                try {
+                    const { error } = await sbClient.from('kash_state').select('id').eq('id', 1).maybeSingle();
+                    if (!error) {
+                        neonAvailable = true;
+                        setSyncStatus('ok', '✓ تم استعادة الاتصال');
+                        if (pendingSync) {
+                            const latest = localStorage.getItem(DB_KEY);
+                            if (latest) {
+                                await sbClient.from('kash_state').upsert(
+                                    { id: 1, data: latest, updated_at: new Date().toISOString() },
+                                    { onConflict: 'id' }
+                                );
+                                pendingSync = false;
+                                setSyncStatus('ok', '✅ تمت مزامنة البيانات المعلقة');
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+        }, 30000);
+
         // ==================== بداية اليوم ====================
         function openNewDayFlow() {
-            // من الهيدر — يطبق الكولداون
+            // الموظف يدوس مباشرة — مفيش كلمة سر
             if (!canStartNewDay()) {
-                return showNotification(`⛔ لازم تنتظر ${remainingCooldown()} قبل بداية يوم جديد`, 'error');
+                return showNotification(`⛔ الزرار محجوب لـ ${remainingCooldown()} — المدير فقط يفتح من لوحته`, 'error');
             }
             _newDayFromAdmin = false;
-            showNewDayPassModal('أدخل كلمة سر المدير للمتابعة');
+            openNewDayModalActual(); // مباشرة بدون كلمة سر
         }
 
         function openNewDayAdmin() {
-            // من لوحة المدير — بدون كولداون
+            // من لوحة المدير — بدون كولداون ومباشرة بدون كلمة سر إضافية
             _newDayFromAdmin = true;
             closeAdminDashboard();
-            showNewDayPassModal('🔑 فتح يوم جديد (تجاوز الكولداون — من المدير)');
+            openNewDayModalActual(); // مباشرة
         }
 
         function showNewDayPassModal(hint) {
@@ -2298,9 +2489,17 @@
         function checkNewDayPassword() {
             const inp = document.getElementById('newDayPasswordInput');
             const pass = (inp?.value || '').trim();
+            // كلمة سر بداية اليوم
             if (pass === state.newDayPassword) {
                 document.getElementById('newDayPasswordModal').classList.add('hidden');
                 openNewDayModalActual();
+            }
+            // كلمة سر المدير تتجاوز الكولداون دائماً
+            else if (pass === state.adminPassword) {
+                _newDayFromAdmin = true; // تجاوز الكولداون
+                document.getElementById('newDayPasswordModal').classList.add('hidden');
+                openNewDayModalActual();
+                showNotification('✅ فتح يوم جديد — تجاوز الكولداون (مدير)', 'success');
             } else {
                 showNotification('❌ كلمة السر غير صحيحة', 'error');
                 if (inp) inp.value = '';
@@ -2396,7 +2595,7 @@
 
             saveState(); renderAll(); checkAlerts();
             closeNewDayModal();
-            updateNewDayBtn();
+            updateNewDayBtn(); // يخفي الزرار فوراً
             playSound('newday');
             showNotification('✅ بداية يوم جديد — تم حفظ بيانات اليوم في الهيستوري', 'success');
         }
@@ -2819,6 +3018,7 @@
             renderLogs();
             renderForm();
             renderSettle();
+            updateQuickEditUI();
             safeLucide();
             // animate lines & numbers
             setTimeout(reAnimateLines, 50);
@@ -4168,6 +4368,23 @@
         }
 
         // ==================== Init ====================
+        // حفظ فوري قبل إغلاق/تحديث الصفحة
+        window.addEventListener('beforeunload', () => {
+            try {
+                state.lastSavedTimestamp = Date.now();
+                localStorage.setItem(DB_KEY, JSON.stringify(state));
+                // محاولة sync سريعة (sync XHR - بعض المتصفحات بتدعمه)
+                if (neonAvailable && sbClient) {
+                    const snap = JSON.stringify(state);
+                    // استخدام sendBeacon لو متاح
+                    const url = SB_URL + '/rest/v1/kash_state';
+                    const blob = new Blob([JSON.stringify({ id: 1, data: snap, updated_at: new Date().toISOString() })],
+                        { type: 'application/json' });
+                    navigator.sendBeacon && navigator.sendBeacon(url + '?on_conflict=id', blob);
+                }
+            } catch(e) {}
+        });
+
         window.addEventListener('load', async () => {
             if (sessionStorage.getItem('kash_logged_in') !== 'true') {
                 document.getElementById('loginOverlay').style.display = 'flex';
@@ -4264,6 +4481,12 @@
             const line = state.lines[idx];
             const old = line.balance;
             line.balance = amt;
+            // حساب الليمت بناءً على الفرق
+            const diff = amt - old;
+            if (diff > 0) {
+                line.daily = Math.max(0, (line.daily || 0) + diff);
+                line.monthly = Math.max(0, (line.monthly || 0) + diff);
+            }
             addLog(`✏️ تعديل مدير — ${line.name}`, amt, 0, amt, line.name, `كان: ${old.toLocaleString()} ج`);
             saveState(); renderAll();
             showNotification(`✅ تم تعديل ${line.name}: ${old.toLocaleString()} → ${amt.toLocaleString()} ج`, 'success');
@@ -4453,6 +4676,66 @@
 
 
 
+        // ==================== تعديل مباشر من الواجهة الرئيسية ====================
+        function updateQuickEditUI() {
+            // تحديث قيمة النقدي
+            const cc = document.getElementById('quickEditCashCurrent');
+            if (cc) cc.textContent = state.cash.toLocaleString() + ' ج';
+            // تحديث قائمة الخطوط
+            const sel = document.getElementById('quickEditLineSel');
+            if (sel) {
+                const prev = sel.value;
+                sel.innerHTML = state.lines.map((l, i) =>
+                    `<option value="${i}">${l.name} — ${l.balance.toLocaleString()} ج</option>`
+                ).join('');
+                if (prev) sel.value = prev;
+                updateQuickLineDisplay();
+            }
+        }
+
+        function updateQuickLineDisplay() {
+            const sel = document.getElementById('quickEditLineSel');
+            const disp = document.getElementById('quickEditLineCurrent');
+            if (!sel || !disp) return;
+            const idx = parseInt(sel.value);
+            if (!isNaN(idx) && state.lines[idx]) {
+                disp.textContent = state.lines[idx].balance.toLocaleString() + ' ج';
+            }
+        }
+
+        function quickEditCash() {
+            const inp = document.getElementById('quickEditCashInput');
+            const amt = parseFloat(inp?.value);
+            if (isNaN(amt) || amt < 0) return showNotification('❌ مبلغ غير صحيح', 'error');
+            const old = state.cash;
+            state.cash = amt;
+            addLog('✏️ تعديل مباشر — النقدي', amt, 0, amt, '—', `كان: ${old.toLocaleString()} ج`);
+            saveState(); renderAll(); checkAlerts();
+            showNotification(`✅ تم تعديل النقدي: ${old.toLocaleString()} → ${amt.toLocaleString()} ج`, 'success');
+            if (inp) inp.value = '';
+        }
+
+        function quickEditLine() {
+            const sel = document.getElementById('quickEditLineSel');
+            const inp = document.getElementById('quickEditLineInput');
+            const idx = parseInt(sel?.value);
+            const amt = parseFloat(inp?.value);
+            if (isNaN(idx) || isNaN(amt) || amt < 0) return showNotification('❌ بيانات غير صحيحة', 'error');
+            const line = state.lines[idx];
+            const old = line.balance;
+            line.balance = amt;
+            // حساب الحدود بناءً على الفرق (لو زاد الرصيد)
+            const diff = amt - old;
+            if (diff > 0) {
+                line.daily = Math.max(0, (line.daily || 0) + diff);
+                line.monthly = Math.max(0, (line.monthly || 0) + diff);
+            }
+            addLog(`✏️ تعديل مباشر — ${line.name}`, amt, 0, amt, line.name, `كان: ${old.toLocaleString()} ج`);
+            saveState(); renderAll(); checkAlerts();
+            showNotification(`✅ تم تعديل ${line.name}: ${old.toLocaleString()} → ${amt.toLocaleString()} ج`, 'success');
+            if (inp) inp.value = '';
+        }
+
         Object.assign(window, {
             checkAuth, logout,
             setOp, updateCalculator, syncCalcWithLine,
@@ -4472,7 +4755,8 @@
             openDevModal, closeDevModal, devNukeAll,
             loginLogoTap, showDevPassModal, closeDevPassModal, checkDevPass,
             confirmDeleteDay, doDeleteDayConfirm, cancelDeleteDay, executDeleteDay,
-            checkAdminPasswordWithDelete, updateLastOpCard, animateCount
+            checkAdminPasswordWithDelete, updateLastOpCard, animateCount,
+            quickEditCash, quickEditLine, updateQuickLineDisplay, updateQuickEditUI
         });
     </script>
 </body>
