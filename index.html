@@ -251,8 +251,8 @@
         }
 
         .line-card {
-            background: rgba(18, 18, 18, 0.75);
-            backdrop-filter: blur(16px) saturate(1.2);
+            background: rgba(18, 18, 18, 0.85);
+            /* backdrop-filter disabled for performance */
             border: 1px solid rgba(239, 68, 68, 0.15);
             border-radius: 28px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -942,9 +942,17 @@
             animation: newDayPulse 2.5s ease-in-out infinite;
             transition: opacity 0.3s;
         }
+
         @keyframes newDayPulse {
-            0%, 100% { box-shadow: 0 0 18px rgba(124,58,237,0.5); }
-            50%       { box-shadow: 0 0 38px rgba(124,58,237,1), 0 0 70px rgba(124,58,237,0.4); }
+
+            0%,
+            100% {
+                box-shadow: 0 0 18px rgba(124, 58, 237, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 38px rgba(124, 58, 237, 1), 0 0 70px rgba(124, 58, 237, 0.4);
+            }
         }
 
         /* تصفية اليوم */
@@ -1463,8 +1471,13 @@
             </div>
         </header>
 
-        <!-- العدادات العلوية — النقدي والأرصدة فقط (المصلحة للمدير) -->
+        <!-- العدادات العلوية — الموظف فقط يشوف النقدي والأرصدة -->
         <div class="header-line"></div>
+        <!-- عناصر مخفية للحسابات — مش بتظهر -->
+        <div style="display:none">
+            <span id="disp_withdraw_total">0</span>
+            <span id="disp_warehouse_cash">0</span>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" id="statsGrid">
             <div class="neo-card p-6 shimmer-card" data-tooltip="النقدية الموجودة في الدرج">
                 <p class="text-gray-400 text-xs mb-1 font-bold">💰 النقدي في الدرج</p>
@@ -1590,26 +1603,27 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-black/30 rounded-2xl p-4 border border-yellow-600/20">
                     <p class="text-xs text-gray-400 mb-2 font-bold">&#128181; تعديل النقدي في الدرج</p>
-                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditCashCurrent" class="text-yellow-400 font-bold">&#8212;</span></p>
+                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditCashCurrent"
+                            class="text-yellow-400 font-bold">&#8212;</span></p>
                     <div class="flex gap-2">
                         <input type="text" inputmode="decimal" id="quickEditCashInput" oninput="formatNumInput(this)"
                             placeholder="الرقم الجديد"
                             class="flex-1 p-2 rounded-xl bg-black/40 border border-yellow-600/30 text-white text-sm focus:border-yellow-400 focus:outline-none">
-                        <button onclick="quickEditCash()"
-                            class="btn-glow py-2 px-4 text-sm"
+                        <button onclick="quickEditCash()" class="btn-glow py-2 px-4 text-sm"
                             style="background:linear-gradient(145deg,#d97706,#b45309);">تعديل</button>
                     </div>
                 </div>
                 <div class="bg-black/30 rounded-2xl p-4 border border-blue-600/20">
                     <p class="text-xs text-gray-400 mb-2 font-bold">&#128241; تعديل رصيد خط</p>
-                    <select id="quickEditLineSel" class="custom-select mb-2 text-sm" onchange="updateQuickLineDisplay()"></select>
-                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditLineCurrent" class="text-blue-400 font-bold">&#8212;</span></p>
+                    <select id="quickEditLineSel" class="custom-select mb-2 text-sm"
+                        onchange="updateQuickLineDisplay()"></select>
+                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditLineCurrent"
+                            class="text-blue-400 font-bold">&#8212;</span></p>
                     <div class="flex gap-2">
                         <input type="text" inputmode="decimal" id="quickEditLineInput" oninput="formatNumInput(this)"
                             placeholder="الرصيد الجديد"
                             class="flex-1 p-2 rounded-xl bg-black/40 border border-blue-600/30 text-white text-sm focus:border-blue-400 focus:outline-none">
-                        <button onclick="quickEditLine()"
-                            class="btn-glow py-2 px-4 text-sm"
+                        <button onclick="quickEditLine()" class="btn-glow py-2 px-4 text-sm"
                             style="background:linear-gradient(145deg,#2563eb,#1d4ed8);">تعديل</button>
                     </div>
                 </div>
@@ -1639,6 +1653,7 @@
                                 <th class="p-2 text-right whitespace-nowrap">💵 المبلغ</th>
                                 <th class="p-2 text-right whitespace-nowrap">💰 العمولة</th>
                                 <th class="p-2 text-right whitespace-nowrap">✅ الصافي</th>
+                                <th class="p-2 text-right whitespace-nowrap">🗑</th>
                             </tr>
                         </thead>
                         <tbody id="logItems"></tbody>
@@ -1705,7 +1720,7 @@
                 <div>
                     <label class="block text-gray-400 text-xs mb-1">💰 رصيد النقدي الافتتاحي (الدرج)</label>
                     <input type="text" inputmode="decimal" id="newCashAmount" oninput="formatNumInput(this)"
-                        class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white" value="250,000">
+                        class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white" value="0">
                 </div>
                 <div id="newDayLinesContainer"
                     class="space-y-2 max-h-60 overflow-y-auto border border-white/10 p-3 rounded-lg"></div>
@@ -2032,7 +2047,7 @@
         const MONTHLY_LIMIT = 200000;
         const ALERT_BALANCE = 55000;
         const MAX_LINES = 999;
-        const NEWDAY_COOLDOWN_MS = 20 * 60 * 60 * 1000; // 20 ساعة
+        const NEWDAY_COOLDOWN_MS = 15 * 60 * 60 * 1000; // 15 ساعة
 
         const DEFAULT_STAFF_PASS = '0000';
         const DEFAULT_ADMIN_PASS = '1234';
@@ -2081,10 +2096,10 @@
                     let parsed = data.data;
                     // قد يكون string مزدوج (string of string)
                     if (typeof parsed === 'string') {
-                        try { parsed = JSON.parse(parsed); } catch(e2) {}
+                        try { parsed = JSON.parse(parsed); } catch (e2) { }
                     }
                     if (typeof parsed === 'string') {
-                        try { parsed = JSON.parse(parsed); } catch(e3) {}
+                        try { parsed = JSON.parse(parsed); } catch (e3) { }
                     }
                     return parsed && typeof parsed === 'object' ? parsed : null;
                 }
@@ -2133,7 +2148,7 @@
                                 else { pendingSync = true; }
                             }
                         }
-                    } catch(re) {}
+                    } catch (re) { }
                 }, 5000);
             }
         }
@@ -2171,9 +2186,9 @@
         function makeDefaultLines(count) {
             return Array.from({ length: count }, (_, i) => ({
                 id: i + 1,
-                name: `خط فودافون ${i + 1}`,
-                phone: `0100001281${i}`,
-                balance: 15000 + i * 5000,
+                name: `خط ${i + 1}`,
+                phone: '',
+                balance: 0,
                 daily: 0,
                 monthly: 0,
                 hidden: false
@@ -2182,10 +2197,10 @@
 
         function makeDefault() {
             return {
-                cash: 250000,
+                cash: 0,
                 profit: 0,
                 logs: [],
-                lines: makeDefaultLines(8),
+                lines: makeDefaultLines(4),
                 expenses: [],
                 staffPassword: DEFAULT_STAFF_PASS,
                 adminPassword: DEFAULT_ADMIN_PASS,
@@ -2211,12 +2226,14 @@
         let _saveInProgress = false;
         let _saveRetryTimer = null;
 
+        let _lastSavedSnapshot = '';
         function saveState() {
             state.lastSavedTimestamp = Date.now();
             const snapshot = JSON.stringify(state);
             try { localStorage.setItem(DB_KEY, snapshot); } catch (e) { }
             // ضع في Queue — لو فيه حفظ جاري، الأحدث يستبدله
             _saveQueue = snapshot;
+            _lastSavedSnapshot = snapshot;
             if (!_saveInProgress) _flushSaveQueue();
         }
 
@@ -2227,7 +2244,7 @@
             _saveQueue = null;
             try {
                 await saveToNeon(snap);
-            } catch(e) {}
+            } catch (e) { }
             _saveInProgress = false;
             // لو في قيمة جديدة في الـ queue، احفظها
             if (_saveQueue) _flushSaveQueue();
@@ -2260,12 +2277,12 @@
             setSyncStatus('wait', 'جاري الاتصال...');
             try {
                 await neonInit();
-            } catch(e) {}
+            } catch (e) { }
 
             let cloudData = null;
             try {
                 cloudData = await loadFromNeon();
-            } catch(e) {}
+            } catch (e) { }
 
             if (cloudData && typeof cloudData === 'object') {
                 const localTs = state.lastSavedTimestamp || 0;
@@ -2407,7 +2424,7 @@
             try {
                 const snap = JSON.stringify(state);
                 localStorage.setItem(DB_KEY, snap);
-            } catch(e) {}
+            } catch (e) { }
 
             // لو فيه sync معلق وفيه اتصال، ارفع
             if (pendingSync && navigator.onLine) {
@@ -2426,7 +2443,7 @@
                             }
                         }
                     }
-                } catch(e) {}
+                } catch (e) { }
             }
         }, 1000);
 
@@ -2455,7 +2472,7 @@
                             }
                         }
                     }
-                } catch(e) {}
+                } catch (e) { }
             }
         }, 30000);
 
@@ -2474,6 +2491,15 @@
             _newDayFromAdmin = true;
             closeAdminDashboard();
             openNewDayModalActual(); // مباشرة
+        }
+
+        function adminShowNewDayBtn() {
+            // يُظهر الزرار للموظف من غير ما يفتح مودال البيانات
+            // يصفّر التايمر عشان الموظف يقدر يدوس — ويعيد الحساب 15 ساعة من بعده
+            state.lastNewDayTimestamp = 0; // اظهر الزرار فوراً
+            saveState();
+            updateNewDayBtn();
+            showNotification('✅ تم إظهار زرار بداية اليوم للموظف', 'success');
         }
 
         function showNewDayPassModal(hint) {
@@ -2521,7 +2547,10 @@
             if (ci) ci.value = state.cash;
             // تاريخ اليوم تلقائي
             const di = document.getElementById('newDayDateInput');
-            if (di) di.value = new Date().toLocaleDateString('ar-EG');
+            if (di) {
+                const now = new Date();
+                di.value = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+            }
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -2543,9 +2572,11 @@
             // المخزن = توريد من خط + بعتلك كاش — مش سحب لعميل
             const _snapWarehouseLogs = state.logs.filter(l =>
                 l.type.includes('توريد مخزن') ||
-                l.type.includes('سحب نقدي للمخزن')
+                l.type.includes('سحب نقدي للمخزن') ||
+                (l.type.includes('سحب نقدي 💸') && l.warehouseAmt > 0)
             );
-            const _snapWarehouseTotal = _snapWarehouseLogs.reduce((a, l) => a + l.amt, 0);
+            const _snapWarehouseTotal = _snapWarehouseLogs.reduce((a, l) =>
+                a + Math.round((l.warehouseAmt > 0 && l.type.includes('سحب نقدي 💸')) ? l.warehouseAmt : l.amt), 0);
             const _snapManagerLogs = state.logs.filter(l => l.type.includes('تغذية مدير'));
             const _snapManagerTotal = _snapManagerLogs.reduce((a, l) => a + l.amt, 0);
             const _snapTotalReceived = (state.openingCash || 0) + _snapManagerTotal;
@@ -2588,10 +2619,8 @@
             state.settleHandover = 0;
             state.lastDailyReset = new Date().toDateString();
 
-            // الكولداون فقط للموظف — المدير يفتح في أي وقت
-            if (!_newDayFromAdmin) {
-                state.lastNewDayTimestamp = Date.now();
-            }
+            // الكولداون 15 ساعة — سواء موظف أو مدير (المدير بيقدر يظهر الزرار من لوحته)
+            state.lastNewDayTimestamp = Date.now();
 
             saveState(); renderAll(); checkAlerts();
             closeNewDayModal();
@@ -2669,17 +2698,19 @@
                 </select>
             </div>
             <div id="cashWithdrawContainer" style="display:none;" class="space-y-2">
-                <input type="text" id="cashWithdrawCustName" placeholder="👤 اسم العميل "
+                <input type="text" id="cashWithdrawCustName" placeholder="👤 اسم العميل"
                     class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white">
                 <!-- بعتلك كاش — اختياري -->
                 <div class="rounded-xl p-3 border border-yellow-600/20 space-y-2" style="background:rgba(245,158,11,0.06);">
                     <p class="text-xs text-yellow-400 font-bold">💸 بعتلك كاش للمخزن (اختياري)</p>
-                    <input type="text" inputmode="decimal" id="cashWithdrawToWarehouse" oninput="formatNumInput(this)" placeholder="المبلغ المحوّل للمخزن"
+                    <input type="text" inputmode="decimal" id="cashWithdrawToWarehouse" oninput="formatNumInput(this); calcCashWithdrawComm()"
+                        placeholder="المبلغ اللي وصل للمخزن (أكبر من النقدي)"
                         class="w-full p-2 rounded-xl bg-black/40 border border-yellow-600/30 text-white text-sm focus:border-yellow-400 focus:outline-none">
-                    <input type="text" id="cashWithdrawPhone" placeholder="📱 رقم المحفظه في المخزن"
+                    <input type="text" id="cashWithdrawPhone" placeholder="📱 رقم المحفظة في المخزن"
                         class="w-full p-2 rounded-xl bg-black/40 border border-white/10 text-white text-sm"
                         style="direction:ltr; text-align:right;">
-                    <p class="text-xs text-gray-500">لو كتبت مبلغ هنا — هيتحسب في إجمالي المخزن</p>
+                    <div id="cashWithdrawCommPreview" style="display:none;" class="bg-green-900/20 border border-green-600/30 rounded-xl p-2 text-xs text-green-400 font-bold text-center"></div>
+                    <p class="text-xs text-gray-500">المبلغ في الدرج = النقدي ↑ | المبلغ للمخزن = هنا ↑ | الفرق = العمولة</p>
                 </div>
             </div>
             <div id="merchantContainer" style="display:none;" class="space-y-2">
@@ -2687,7 +2718,7 @@
                     class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white mt-2">
             </div>
 
-            <input type="text" inputmode="decimal" id="amt" oninput="formatNumInput(this)" placeholder="💵 المبلغ"
+            <input type="text" inputmode="decimal" id="amt" oninput="formatNumInput(this); calcCashWithdrawComm()" placeholder="💵 المبلغ"
                 class="w-full p-3 rounded-2xl bg-black/30 border border-white/10 text-white text-lg mt-2">
             <button onclick="showConfirm('تأكيد العملية','هل أنت متأكد من تنفيذ هذه العملية؟',doOther)"
                 class="btn-glow w-full py-4 mt-2">✅ تنفيذ العملية</button>`;
@@ -2718,6 +2749,26 @@
             }, 200);
         }
 
+        function calcCashWithdrawComm() {
+            const amtEl = document.getElementById('amt');
+            const wEl = document.getElementById('cashWithdrawToWarehouse');
+            const preview = document.getElementById('cashWithdrawCommPreview');
+            if (!amtEl || !wEl || !preview) return;
+            const amt = Math.round(parseFloat(amtEl.value) || 0);
+            const warehouse = Math.round(parseFloat(wEl.value) || 0);
+            if (amt > 0 && warehouse > amt) {
+                const comm = warehouse - amt;
+                preview.style.display = 'block';
+                preview.textContent = `✅ العمولة = ${warehouse.toLocaleString()} - ${amt.toLocaleString()} = ${comm.toLocaleString()} ج`;
+            } else if (amt > 0 && warehouse === amt) {
+                preview.style.display = 'block';
+                preview.textContent = 'ℹ️ لا عمولة — المبلغان متساويان';
+                preview.style.color = '#888';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
         function syncCalcWithLine() {
             const val = parseFloat(document.getElementById('amountOnLine')?.value);
             if (!isNaN(val)) {
@@ -2733,8 +2784,8 @@
             const net = amt - comm;
             const cs = document.getElementById('calcComm');
             const ns = document.getElementById('calcNet');
-            if (cs) cs.innerText = comm.toFixed(2) + ' ج';
-            if (ns) ns.innerText = net.toFixed(2) + ' ج';
+            if (cs) cs.innerText = Math.round(comm).toLocaleString() + ' ج';
+            if (ns) ns.innerText = Math.round(net).toLocaleString() + ' ج';
         }
 
         function doWithdraw() {
@@ -2748,7 +2799,7 @@
             if (isNaN(lineIdx)) return showNotification('❌ اختر الخط', 'error');
 
             const line = state.lines[lineIdx];
-            const comm = amtOnLine - cashPaid;
+            const comm = Math.round(amtOnLine - cashPaid);
             if (comm < 0) return showNotification('❌ المبلغ النقدي لا يمكن أن يكون أكبر من المبلغ على الخط', 'error');
             if (state.cash < cashPaid) return showNotification('❌ النقدي غير كافي في الدرج!', 'error');
 
@@ -2762,11 +2813,11 @@
             state.cash -= cashPaid;
             state.profit += comm;
 
-            addLog('سحب 💳', amtOnLine, comm, cashPaid, line.name, cust);
+            addLog('سحب 💳', Math.round(amtOnLine), Math.round(comm), Math.round(cashPaid), line.name, cust);
             playSound('withdraw');
             saveState(); renderAll(); checkAlerts();
             if (limitWarn) showNotification(limitWarn, 'warning');
-            showNotification(`✅ تم السحب | العمولة: ${comm.toFixed(2)} ج`, 'success');
+            showNotification(`✅ تم السحب | العمولة: ${Math.round(comm)} ج`, 'success');
             // mini confetti عند تحقيق عمولة كبيرة
             if (comm >= 20) miniConfetti(window.innerWidth / 2, window.innerHeight / 3);
 
@@ -2786,7 +2837,7 @@
             line.balance -= amt;
             state.cash += amt;
 
-            addLog('إيداع 📥', amt, 0, amt, line.name, '');
+            addLog('إيداع 📥', Math.round(amt), 0, Math.round(amt), line.name, '');
             playSound('deposit');
             saveState(); renderAll(); checkAlerts();
             showNotification('✅ تم الإيداع', 'success');
@@ -2824,19 +2875,24 @@
             } else if (type === 'cashwithdraw') {
                 const cust = (document.getElementById('cashWithdrawCustName')?.value || '').trim();
                 const phone = (document.getElementById('cashWithdrawPhone')?.value || '').trim();
-                const toWarehouse = parseFloat(document.getElementById('cashWithdrawToWarehouse')?.value) || 0;
+                const toWarehouse = Math.round(parseFloat(document.getElementById('cashWithdrawToWarehouse')?.value) || 0);
+                // amt = النقدي الخارج من الدرج للعميل
+                // toWarehouse = المبلغ اللي وصل للمخزن (أكبر من amt)
+                // العمولة = toWarehouse - amt
                 if (state.cash < amt) return showNotification('❌ النقدي غير كافي', 'error');
+                if (toWarehouse > 0 && toWarehouse < amt) return showNotification('❌ مبلغ المخزن لازم يكون أكبر من النقدي الخارج', 'error');
+                const comm_cw = toWarehouse > 0 ? Math.round(toWarehouse - amt) : 0;
                 state.cash -= amt;
-                // سجّل السحب للعميل
+                state.profit += comm_cw;
+                // تفاصيل العملية في حقل العميل: اسم + رقم + مبلغ المخزن
+                const warehouseNote = toWarehouse > 0 ? ` | مخزن: ${toWarehouse.toLocaleString()}` : '';
                 const custNote = [cust, phone ? `📱 ${phone}` : ''].filter(Boolean).join(' — ') || 'عميل';
-                addLog('سحب نقدي 💸', amt, 0, amt, '—', custNote);
-                // لو في مبلغ محوّل للمخزن — سجّله منفصل كـ "بعتلك كاش"
-                if (toWarehouse > 0 && toWarehouse <= amt) {
-                    addLog('سحب نقدي للمخزن 💸', toWarehouse, 0, toWarehouse, '—',
-                        [phone ? `📱 ${phone}` : '', cust].filter(Boolean).join(' — ') || 'للمخزن');
-                }
+                // عملية واحدة بس — تحمل كل التفاصيل
+                // نحفظ toWarehouse في العملية عشان deleteLog يشتغل صح
+                addLog('سحب نقدي 💸', amt, comm_cw, amt, '—', custNote + warehouseNote, toWarehouse);
                 playSound('success');
-                showNotification(`✅ تم السحب ${amt.toLocaleString()} ج${toWarehouse > 0 ? ` — ${toWarehouse.toLocaleString()} ج للمخزن` : ''}`, 'success');
+                const commMsg = comm_cw > 0 ? ` | عمولة: ${comm_cw.toLocaleString()} ج` : '';
+                showNotification(`✅ خرج من الدرج: ${amt.toLocaleString()} ج${warehouseNote}${commMsg}`, 'success');
             } else if (type === 'merchant') {
                 const cust = (document.getElementById('merchantNameInput')?.value || '').trim() || 'تاجر';
                 if (state.cash < amt) return showNotification('❌ النقدي غير كافي', 'error');
@@ -2872,15 +2928,61 @@
             if (af) af.value = '';
         }
 
-        function addLog(type, amount, commission, net, lineName, customer) {
+        function addLog(type, amount, commission, net, lineName, customer, warehouseAmt) {
             state.logs.unshift({
+                id: Math.floor(Date.now() + Math.random() * 9999),
                 time: new Date().toLocaleTimeString('ar-EG'),
                 date: new Date().toLocaleDateString('ar-EG'),
                 line: lineName,
                 type, customer: customer || '',
-                amt: amount, comm: commission || 0, net
+                amt: Math.round(amount),
+                comm: Math.round(commission || 0),
+                net: Math.round(net),
+                warehouseAmt: warehouseAmt ? Math.round(warehouseAmt) : 0
             });
             if (state.logs.length > 2000) state.logs.pop();
+        }
+
+        function deleteLog(logId) {
+            const idx = state.logs.findIndex(l => l.id == logId);
+            if (idx === -1) return showNotification('❌ العملية غير موجودة', 'error');
+            const log = state.logs[idx];
+            // عكس تأثير العملية على الأرقام
+            const t = log.type;
+            if (t.includes('سحب 💳')) {
+                const line = state.lines.find(l => l.name === log.line);
+                if (line) {
+                    line.balance -= Math.round(log.amt);
+                    line.daily = Math.max(0, (line.daily || 0) - Math.round(log.amt));
+                    line.monthly = Math.max(0, (line.monthly || 0) - Math.round(log.amt));
+                }
+                state.cash += Math.round(log.net);
+                state.profit -= Math.round(log.comm || 0);
+            } else if (t.includes('إيداع 📥')) {
+                const line = state.lines.find(l => l.name === log.line);
+                if (line) line.balance += log.amt;
+                state.cash -= log.amt;
+            } else if (t.includes('تغذية مدير')) {
+                state.cash -= log.amt;
+            } else if (t.includes('مصروفات')) {
+                state.cash += log.amt;
+                const expIdx = state.expenses.findIndex(e =>
+                    Math.abs(e.amount - log.amt) < 0.01 &&
+                    Math.abs(new Date(e.date).getTime() - (log._ts || 0)) < 5000
+                );
+                if (expIdx !== -1) state.expenses.splice(expIdx, 1);
+            } else if (t.includes('سحب نقدي 💸') || t.includes('سحب تجار')) {
+                state.cash += Math.round(log.amt);
+                state.profit -= Math.round(log.comm || 0);
+            } else if (t.includes('توريد مخزن')) {
+                const line = state.lines.find(l => l.name === log.line);
+                if (line) line.balance += log.amt;
+            } else if (t.includes('سحب نقدي للمخزن')) {
+                state.cash += log.amt;
+            }
+            state.logs.splice(idx, 1);
+            saveState(); renderAll(); checkAlerts();
+            showNotification('✅ تم حذف العملية وعكس تأثيرها', 'success');
         }
 
         // ==================== تصفية اليوم ====================
@@ -2890,13 +2992,14 @@
             const managerTotal = managerLogs.reduce((a, l) => a + l.amt, 0);
             const totalReceived = openingCash + managerTotal;
 
-            // المخزن = توريد من خط + بعتلك كاش (سحب نقدي للمخزن)
-            // مش بيتحسب: سحب من المخزن لعميل (سحب نقدي من المخزن)
+            // المخزن = توريد من خط + warehouseAmt في سحب نقدي + سحب نقدي للمخزن (legacy)
             const warehouseLogs = state.logs.filter(l =>
                 l.type.includes('توريد مخزن') ||
-                l.type.includes('سحب نقدي للمخزن')
+                l.type.includes('سحب نقدي للمخزن') ||
+                (l.type.includes('سحب نقدي 💸') && l.warehouseAmt > 0)
             );
-            const warehouseTotal = warehouseLogs.reduce((a, l) => a + l.amt, 0);
+            const warehouseTotal = warehouseLogs.reduce((a, l) =>
+                a + Math.round(l.warehouseAmt > 0 && l.type.includes('سحب نقدي 💸') ? l.warehouseAmt : l.amt), 0);
             const shouldHandover = totalReceived - warehouseTotal;
             return { openingCash, managerLogs, managerTotal, totalReceived, warehouseLogs, warehouseTotal, shouldHandover };
         }
@@ -3053,6 +3156,27 @@
             updateLastOpCard();
         }
 
+        // حساب مركزي للإحصائيات — بتتستخدم في لوحة المدير
+        function calcTodayStats() {
+            // إجمالي السحب من الدرج = سحب فودافون + سحب نقدي بس (without merchant)
+            const withdrawFromDrawer = state.logs
+                .filter(l =>
+                    l.type.includes('سحب 💳') ||
+                    l.type.includes('سحب نقدي 💸') ||
+                    l.type.includes('سحب نقدي للمخزن')
+                )
+                .reduce((a, l) => a + Math.round(l.net || l.amt || 0), 0);
+            // كاش للمخزن = warehouseAmt المخزن في سحب نقدي + توريد مخزن من خط
+            const warehouseCash =
+                state.logs.filter(l => l.type.includes('سحب نقدي 💸') && l.warehouseAmt > 0)
+                    .reduce((a, l) => a + Math.round(l.warehouseAmt), 0) +
+                state.logs.filter(l => l.type.includes('توريد مخزن'))
+                    .reduce((a, l) => a + Math.round(l.amt), 0) +
+                state.logs.filter(l => l.type.includes('سحب نقدي للمخزن'))
+                    .reduce((a, l) => a + Math.round(l.amt), 0);
+            return { withdrawFromDrawer, warehouseCash };
+        }
+
         function updateLastOpCard() {
             const card = document.getElementById('lastOpCard');
             const txt = document.getElementById('lastOpText');
@@ -3129,30 +3253,38 @@
                 !searchVal ||
                 (l.customer && l.customer.toLowerCase().includes(searchVal)) ||
                 l.type.includes(searchVal) ||
-                l.line.toLowerCase().includes(searchVal)
+                (l.line && l.line.toLowerCase().includes(searchVal))
             );
 
             if (!filteredLogs.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-500">لا توجد عمليات</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-gray-500">لا توجد عمليات</td></tr>';
                 return;
             }
             const total = state.logs.length;
             tbody.innerHTML = filteredLogs.map(l => {
                 const origIndex = state.logs.indexOf(l);
                 const opNum = total - origIndex;
+                const logId = l.id || origIndex;
                 return `
         <tr class="border-b border-white/5 hover:bg-white/5">
-            <td class="p-3 text-xs text-gray-500 font-bold">${opNum}</td>
-            <td class="p-3 text-xs">
+            <td class="p-2 text-xs text-gray-500 font-bold">${opNum}</td>
+            <td class="p-2 text-xs">
                 <div class="font-bold">${l.time}</div>
                 <div class="text-gray-600 text-xs">${l.date || ''}</div>
             </td>
-            <td class="p-3 text-yellow-300 font-bold text-sm">${l.customer || '—'}</td>
-            <td class="p-3 text-xs text-gray-400">${l.line}</td>
-            <td class="p-3 text-xs">${l.type}</td>
-            <td class="p-3 font-bold">${l.amt.toLocaleString()}</td>
-            <td class="p-3 text-green-400">${(l.comm || 0).toFixed(2)}</td>
-            <td class="p-3 text-red-400">${l.net.toLocaleString()}</td>
+            <td class="p-2 text-yellow-300 font-bold text-sm">${l.customer || '—'}</td>
+            <td class="p-2 text-xs text-gray-400">${l.line}</td>
+            <td class="p-2 text-xs">${l.type}${l.warehouseAmt > 0 ? `<div class="text-yellow-500 text-xs">🏢 ${l.warehouseAmt.toLocaleString()} ج</div>` : ''}</td>
+            <td class="p-2 font-bold">${l.amt.toLocaleString()}</td>
+            <td class="p-2 text-green-400">${Math.round(l.comm || 0).toLocaleString()}</td>
+            <td class="p-2 text-red-400">${l.net.toLocaleString()}</td>
+            <td class="p-2">
+                <button onclick="showConfirm('حذف عملية','هل تريد حذف هذه العملية وعكس تأثيرها؟',()=>deleteLog(${logId}))"
+                    style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer;transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(239,68,68,0.35)'"
+                    onmouseout="this.style.background='rgba(239,68,68,0.15)'"
+                    title="حذف العملية">🗑</button>
+            </td>
         </tr>`;
             }).join('');
         }
@@ -3324,10 +3456,12 @@
                 const ml = state.logs.filter(l => l.type.includes('تغذية مدير'));
                 const totalReceived = (state.openingCash || 0) + ml.reduce((a, l) => a + l.amt, 0);
                 const tm = state.logs.filter(l => l.type.includes('سحب تجار')).reduce((a, l) => a + l.amt, 0);
+                const { withdrawFromDrawer, warehouseCash: warehouseCashToday } = calcTodayStats();
 
                 content.innerHTML = `
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-            <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">💰 إجمالي السحوبات</p><div class="text-2xl font-bold">${tw.toLocaleString()} ج</div></div>
+            <div class="neo-card p-4" style="border-color:rgba(239,68,68,0.3)"><p class="text-gray-400 text-xs mb-1">💸 إجمالي السحب من الدرج</p><div class="text-2xl font-bold text-red-400">${withdrawFromDrawer.toLocaleString()} ج</div></div>
+            <div class="neo-card p-4" style="border-color:rgba(245,158,11,0.3)"><p class="text-gray-400 text-xs mb-1">🏢 كاش للمخزن اليوم</p><div class="text-2xl font-bold text-yellow-400">${warehouseCashToday.toLocaleString()} ج</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">📥 إجمالي الإيداعات</p><div class="text-2xl font-bold">${td.toLocaleString()} ج</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">🏪 سحوبات تجار</p><div class="text-2xl font-bold text-yellow-500">${tm.toLocaleString()} ج</div></div>
             <div class="neo-card p-4"><p class="text-gray-400 text-xs mb-1">📈 المصلحة</p><div class="text-2xl font-bold text-green-400">${state.profit.toLocaleString()} ج</div></div>
@@ -3443,7 +3577,12 @@
                 <button onclick="closeAdminDashboard(); openNewDayAdmin();"
                     class="btn-glow py-2 px-4 text-sm"
                     style="background: linear-gradient(145deg, #8b5cf6, #6d28d9);">
-                    🗓️ بداية يوم جديد
+                    🗓️ بداية يوم (من المدير)
+                </button>
+                <button onclick="adminShowNewDayBtn(); closeAdminDashboard();"
+                    class="btn-glow py-2 px-4 text-sm"
+                    style="background: linear-gradient(145deg, #0ea5e9, #0284c7);">
+                    👁️ أظهر زرار البداية للموظف
                 </button>
                 <button onclick="adminGenerateDayReport()"
                     class="btn-glow py-2 px-4 text-sm"
@@ -3607,7 +3746,7 @@
                         <div style="max-height:300px; overflow-y:auto;" class="rounded-xl">
                             <table class="w-full text-xs text-right">
                                 <thead class="text-gray-500 border-b border-gray-700 sticky top-0 bg-gray-900">
-                                    <tr><th class="p-2">م</th><th class="p-2">الوقت</th><th class="p-2">الخط</th><th class="p-2">العميل</th><th class="p-2">النوع</th><th class="p-2">المبلغ</th><th class="p-2">العمولة</th><th class="p-2">الصافي</th></tr>
+                                    <tr><th class="p-2">م</th><th class="p-2">الوقت</th><th class="p-2">الخط</th><th class="p-2">العميل</th><th class="p-2">النوع</th><th class="p-2">المبلغ</th><th class="p-2">العمولة</th><th class="p-2">الصافي</th><th class="p-2">🗑</th></tr>
                                 </thead>
                                 <tbody>
                                     ${day.logs.map((l, i) => {
@@ -3616,8 +3755,9 @@
                                             <td class="p-2 text-gray-500 font-bold">${opNum}</td>
                                             <td class="p-2">${l.time}</td><td class="p-2">${l.line}</td><td class="p-2 font-bold text-yellow-300">${l.customer || '—'}</td><td class="p-2">${l.type}</td>
                                             <td class="p-2 font-bold">${l.amt.toLocaleString()}</td>
-                                            <td class="p-2 text-green-400">${(l.comm || 0).toFixed(2)}</td>
+                                            <td class="p-2 text-green-400">${Math.round(l.comm || 0)}</td>
                                             <td class="p-2 text-red-400">${l.net.toLocaleString()}</td>
+                                            <td class="p-2"><button onclick="showConfirm('حذف عملية','تأكيد الحذف وعكس تأثيرها؟',()=>{deleteLog(${l.id || i});switchAdminTab('stats');})" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:6px;padding:2px 7px;font-size:11px;cursor:pointer;">🗑</button></td>
                                         </tr>`;
                     }).join('')}
                                 </tbody>
@@ -3893,7 +4033,7 @@
             const data = state.logs.map(l => ({
                 الوقت: l.time, التاريخ: l.date, الخط: l.line,
                 العميل: l.customer || '—', النوع: l.type,
-                المبلغ: l.amt, العمولة: (l.comm || 0).toFixed(2), الصافي: l.net
+                المبلغ: l.amt, العمولة: Math.round(l.comm || 0), الصافي: l.net
             }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
@@ -4382,7 +4522,7 @@
                         { type: 'application/json' });
                     navigator.sendBeacon && navigator.sendBeacon(url + '?on_conflict=id', blob);
                 }
-            } catch(e) {}
+            } catch (e) { }
         });
 
         window.addEventListener('load', async () => {
@@ -4514,7 +4654,7 @@
             ];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sum), 'ملخص اليوم');
             // شيت العمليات
-            const logs = state.logs.map(l => ({ الوقت: l.time, العميل: l.customer || '—', الخط: l.line, النوع: l.type, المبلغ: l.amt, العمولة: (l.comm || 0).toFixed(2), الصافي: l.net }));
+            const logs = state.logs.map(l => ({ الوقت: l.time, العميل: l.customer || '—', الخط: l.line, النوع: l.type, المبلغ: l.amt, العمولة: Math.round(l.comm || 0), الصافي: l.net }));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logs), 'سجل العمليات');
             XLSX.writeFile(wb, `تقرير_يوم_${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.xlsx`);
             showNotification('✅ تم تصدير تقرير اليوم', 'success');
@@ -4531,7 +4671,7 @@
             // شيت العمليات
             const logsData = day.logs.map(l => ({
                 الوقت: l.time, الخط: l.line, النوع: l.type,
-                المبلغ: l.amt, العمولة: (l.comm || 0).toFixed(2), الصافي: l.net,
+                المبلغ: l.amt, العمولة: Math.round(l.comm || 0), الصافي: l.net,
                 العميل: l.customer || '—'
             }));
             const ws1 = XLSX.utils.json_to_sheet(logsData);
@@ -4595,7 +4735,7 @@
                 if (day.logs && day.logs.length) {
                     const logsData = day.logs.map(l => ({
                         الوقت: l.time, الخط: l.line, النوع: l.type,
-                        المبلغ: l.amt, العمولة: (l.comm || 0).toFixed(2), الصافي: l.net
+                        المبلغ: l.amt, العمولة: Math.round(l.comm || 0), الصافي: l.net
                     }));
                     const ws = XLSX.utils.json_to_sheet(logsData);
                     const sheetName = day.date.replace(/\//g, '-').slice(0, 31);
@@ -4756,7 +4896,8 @@
             loginLogoTap, showDevPassModal, closeDevPassModal, checkDevPass,
             confirmDeleteDay, doDeleteDayConfirm, cancelDeleteDay, executDeleteDay,
             checkAdminPasswordWithDelete, updateLastOpCard, animateCount,
-            quickEditCash, quickEditLine, updateQuickLineDisplay, updateQuickEditUI
+            quickEditCash, quickEditLine, updateQuickLineDisplay, updateQuickEditUI,
+            deleteLog, adminShowNewDayBtn, calcCashWithdrawComm, calcTodayStats
         });
     </script>
 </body>
