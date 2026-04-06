@@ -942,17 +942,9 @@
             animation: newDayPulse 2.5s ease-in-out infinite;
             transition: opacity 0.3s;
         }
-
         @keyframes newDayPulse {
-
-            0%,
-            100% {
-                box-shadow: 0 0 18px rgba(124, 58, 237, 0.5);
-            }
-
-            50% {
-                box-shadow: 0 0 38px rgba(124, 58, 237, 1), 0 0 70px rgba(124, 58, 237, 0.4);
-            }
+            0%, 100% { box-shadow: 0 0 18px rgba(124,58,237,0.5); }
+            50%       { box-shadow: 0 0 38px rgba(124,58,237,1), 0 0 70px rgba(124,58,237,0.4); }
         }
 
         /* تصفية اليوم */
@@ -1462,10 +1454,10 @@
                         style="background: linear-gradient(145deg, #991b1b, #7f1d1d);">
                         <i data-lucide="log-out" class="w-4 h-4 text-red-300"></i> خروج
                     </button>
-                    <button onclick="location.reload()" title="تحديث التغييرات"
+                    <button onclick="forceSyncAndNotify()" id="btnOnline" title="رفع البيانات الآن + تحديث كل الأجهزة"
                         class="btn-glow text-sm py-2 px-4 flex items-center gap-2"
-                        style="background: linear-gradient(145deg, #2563eb, #1e3a8a);">
-                        <i data-lucide="refresh-cw" class="w-4 h-4 text-blue-300"></i> تحديث
+                        style="background: linear-gradient(145deg, #059669, #047857);">
+                        <i data-lucide="wifi" class="w-4 h-4"></i> 🟢 Online
                     </button>
                 </div>
             </div>
@@ -1603,27 +1595,26 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-black/30 rounded-2xl p-4 border border-yellow-600/20">
                     <p class="text-xs text-gray-400 mb-2 font-bold">&#128181; تعديل النقدي في الدرج</p>
-                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditCashCurrent"
-                            class="text-yellow-400 font-bold">&#8212;</span></p>
+                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditCashCurrent" class="text-yellow-400 font-bold">&#8212;</span></p>
                     <div class="flex gap-2">
                         <input type="text" inputmode="decimal" id="quickEditCashInput" oninput="formatNumInput(this)"
                             placeholder="الرقم الجديد"
                             class="flex-1 p-2 rounded-xl bg-black/40 border border-yellow-600/30 text-white text-sm focus:border-yellow-400 focus:outline-none">
-                        <button onclick="quickEditCash()" class="btn-glow py-2 px-4 text-sm"
+                        <button onclick="quickEditCash()"
+                            class="btn-glow py-2 px-4 text-sm"
                             style="background:linear-gradient(145deg,#d97706,#b45309);">تعديل</button>
                     </div>
                 </div>
                 <div class="bg-black/30 rounded-2xl p-4 border border-blue-600/20">
                     <p class="text-xs text-gray-400 mb-2 font-bold">&#128241; تعديل رصيد خط</p>
-                    <select id="quickEditLineSel" class="custom-select mb-2 text-sm"
-                        onchange="updateQuickLineDisplay()"></select>
-                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditLineCurrent"
-                            class="text-blue-400 font-bold">&#8212;</span></p>
+                    <select id="quickEditLineSel" class="custom-select mb-2 text-sm" onchange="updateQuickLineDisplay()"></select>
+                    <p class="text-xs text-gray-600 mb-2">الحالي: <span id="quickEditLineCurrent" class="text-blue-400 font-bold">&#8212;</span></p>
                     <div class="flex gap-2">
                         <input type="text" inputmode="decimal" id="quickEditLineInput" oninput="formatNumInput(this)"
                             placeholder="الرصيد الجديد"
                             class="flex-1 p-2 rounded-xl bg-black/40 border border-blue-600/30 text-white text-sm focus:border-blue-400 focus:outline-none">
-                        <button onclick="quickEditLine()" class="btn-glow py-2 px-4 text-sm"
+                        <button onclick="quickEditLine()"
+                            class="btn-glow py-2 px-4 text-sm"
                             style="background:linear-gradient(145deg,#2563eb,#1d4ed8);">تعديل</button>
                     </div>
                 </div>
@@ -2096,10 +2087,10 @@
                     let parsed = data.data;
                     // قد يكون string مزدوج (string of string)
                     if (typeof parsed === 'string') {
-                        try { parsed = JSON.parse(parsed); } catch (e2) { }
+                        try { parsed = JSON.parse(parsed); } catch(e2) {}
                     }
                     if (typeof parsed === 'string') {
-                        try { parsed = JSON.parse(parsed); } catch (e3) { }
+                        try { parsed = JSON.parse(parsed); } catch(e3) {}
                     }
                     return parsed && typeof parsed === 'object' ? parsed : null;
                 }
@@ -2113,12 +2104,10 @@
         async function saveToNeon(stateData) {
             if (!sbClient || !neonAvailable) {
                 pendingSync = true;
-                setSyncStatus('fail', '📴 أوفلاين — محفوظ محلياً');
+                setSyncStatus('fail', '📴 أوفلاين');
                 return;
             }
-            // تأكد دائماً إن الداتا string
             const dataStr = typeof stateData === 'string' ? stateData : JSON.stringify(stateData);
-            setSyncStatus('wait', 'جاري الحفظ...');
             try {
                 const { error } = await sbClient.from('kash_state').upsert(
                     { id: 1, data: dataStr, updated_at: new Date().toISOString() },
@@ -2126,52 +2115,21 @@
                 );
                 if (error) throw error;
                 pendingSync = false;
-                state.lastSavedTimestamp = state.lastSavedTimestamp || Date.now();
-                setSyncStatus('ok', '✓ تمت المزامنة ' + new Date().toLocaleTimeString('ar-EG'));
-            } catch (e) {
+                setSyncStatus('ok', '✓ ' + new Date().toLocaleTimeString('ar-EG'));
+            } catch(e) {
                 pendingSync = true;
                 neonAvailable = false;
-                setSyncStatus('fail', '📴 خطأ في الرفع — محفوظ محلياً');
-                // retry بعد 5 ثواني
-                clearTimeout(_saveRetryTimer);
-                _saveRetryTimer = setTimeout(async () => {
-                    try {
-                        await neonInit();
-                        if (neonAvailable) {
-                            const latest = localStorage.getItem(DB_KEY);
-                            if (latest) {
-                                const { error: e2 } = await sbClient.from('kash_state').upsert(
-                                    { id: 1, data: latest, updated_at: new Date().toISOString() },
-                                    { onConflict: 'id' }
-                                );
-                                if (!e2) { pendingSync = false; setSyncStatus('ok', '✓ تمت المزامنة (retry)'); }
-                                else { pendingSync = true; }
-                            }
-                        }
-                    } catch (re) { }
-                }, 5000);
+                setSyncStatus('fail', '📴 خطأ — سيُعاد الرفع');
             }
         }
 
-        window.addEventListener('online', async () => {
-            setSyncStatus('wait', '🔄 النت رجع — جاري الرفع...');
-            try {
-                await neonInit();
-                if (neonAvailable) {
-                    const latest = localStorage.getItem(DB_KEY) || JSON.stringify(state);
-                    const { error } = await sbClient.from('kash_state').upsert(
-                        { id: 1, data: latest, updated_at: new Date().toISOString() },
-                        { onConflict: 'id' }
-                    );
-                    if (!error) { pendingSync = false; setSyncStatus('ok', '✅ تمت المزامنة بعد رجوع النت'); }
-                    else { pendingSync = true; setSyncStatus('fail', 'فشل الرفع'); }
-                }
-            } catch (e) { setSyncStatus('fail', 'فشل الرفع'); }
+        window.addEventListener('online', () => {
+            pendingSync = true; // الـ tick هيتولى الرفع
+            setSyncStatus('wait', '🔄 النت رجع...');
         });
-
         window.addEventListener('offline', () => {
             neonAvailable = false;
-            setSyncStatus('fail', '📴 النت مقطوع — وضع أوفلاين');
+            setSyncStatus('fail', '📴 أوفلاين');
         });
 
         function setSyncStatus(type, msg) {
@@ -2224,7 +2182,6 @@
         // ==================== حفظ موثوق مع Queue ====================
         let _saveQueue = null;
         let _saveInProgress = false;
-        let _saveRetryTimer = null;
 
         let _lastSavedSnapshot = '';
         function saveState() {
@@ -2244,7 +2201,7 @@
             _saveQueue = null;
             try {
                 await saveToNeon(snap);
-            } catch (e) { }
+            } catch(e) {}
             _saveInProgress = false;
             // لو في قيمة جديدة في الـ queue، احفظها
             if (_saveQueue) _flushSaveQueue();
@@ -2264,49 +2221,47 @@
         }
 
         async function loadInitialState() {
-            // أولاً: حمّل من localStorage (فوري)
+            // 1. حمّل من localStorage فوراً (لا تنتظر السيرفر)
+            let localState = null;
             try {
                 const raw = localStorage.getItem(DB_KEY);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    state = fixState({ ...makeDefault(), ...parsed });
-                }
-            } catch (e) { state = makeDefault(); }
-
-            // ثانياً: حاول الاتصال بـ Supabase
-            setSyncStatus('wait', 'جاري الاتصال...');
-            try {
-                await neonInit();
-            } catch (e) { }
-
-            let cloudData = null;
-            try {
-                cloudData = await loadFromNeon();
-            } catch (e) { }
-
-            if (cloudData && typeof cloudData === 'object') {
-                const localTs = state.lastSavedTimestamp || 0;
-                const cloudTs = cloudData.lastSavedTimestamp || 0;
-                if (cloudTs >= localTs) {
-                    state = fixState({ ...makeDefault(), ...cloudData });
-                    try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch (e) { }
-                    setSyncStatus('ok', '✓ متصل — بيانات محدّثة من السحابة');
-                } else {
-                    // البيانات المحلية أحدث — ارفعها
-                    const snap = JSON.stringify(state);
-                    saveToNeon(snap);
-                    setSyncStatus('ok', '✓ رُفعت البيانات المحلية الأحدث');
-                }
-            } else if (!neonAvailable) {
-                setSyncStatus('fail', '📴 وضع أوفلاين — بيانات محلية');
-                pendingSync = true;
-            } else {
-                // أول مرة — ارفع البيانات الافتراضية
-                saveToNeon(JSON.stringify(state));
-                setSyncStatus('ok', '✓ تم تهيئة قاعدة البيانات');
+                if (raw) localState = JSON.parse(raw);
+            } catch(e) {}
+            if (localState) {
+                state = fixState({ ...makeDefault(), ...localState });
             }
 
-            // تصفير تلقائي بعد تحميل البيانات
+            // 2. اتصل بـ Supabase
+            setSyncStatus('wait', 'جاري الاتصال...');
+            try { await neonInit(); } catch(e) {}
+
+            // 3. اسحب من السيرفر
+            let cloudData = null;
+            try { cloudData = await loadFromNeon(); } catch(e) {}
+
+            if (cloudData && typeof cloudData === 'object') {
+                const localTs = (localState && localState.lastSavedTimestamp) || 0;
+                const cloudTs = cloudData.lastSavedTimestamp || 0;
+                if (cloudTs > localTs) {
+                    // السيرفر أحدث — استخدمه
+                    state = fixState({ ...makeDefault(), ...cloudData });
+                    try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
+                    _lastCloudTs = Date.now();
+                    setSyncStatus('ok', '✓ محدّث من السيرفر');
+                } else if (localTs >= cloudTs) {
+                    // المحلي أحدث أو متساوي — ارفع للسيرفر بدون تغيير state
+                    pendingSync = true; // سيترفع في الـ tick القادم
+                    setSyncStatus('ok', '✓ متصل — بياناتك محفوظة');
+                }
+            } else if (!neonAvailable) {
+                setSyncStatus('fail', '📴 أوفلاين — بيانات محلية');
+                pendingSync = true;
+            } else {
+                // أول مرة على السيرفر
+                pendingSync = true;
+                setSyncStatus('ok', '✓ أول اتصال — جاري الرفع');
+            }
+
             checkDailyReset();
             checkMonthlyReset();
             renderAll();
@@ -2411,70 +2366,65 @@
                 btn.style.display = 'none'; // اخفي الزرار تماماً عند الموظف
             }
         }
-        setInterval(updateNewDayBtn, 10000); // كل 10 ثواني عشان يظهر تاني بسرعة
-        // تحقق من التصفير كل ساعة لو الموقع فاتح
-        setInterval(() => {
-            checkDailyReset();
-            checkMonthlyReset();
-        }, 60 * 60 * 1000);
+        setInterval(updateNewDayBtn, 10000);
+        setInterval(() => { checkDailyReset(); checkMonthlyReset(); }, 3600000);
 
-        // ===== مزامنة كل ثانية: لو فيه pending ارفع + حفظ محلي دوري =====
+        // ===== Tick رئيسي: كل ثانية =====
+        // 1) حفظ محلي دوري
+        // 2) رفع للسيرفر لو في pending
+        // 3) سحب من السيرفر للأجهزة الأخرى (real-time sync)
+        let _lastCloudTs = 0; // آخر timestamp شفناه على السيرفر
+        let _pollCounter = 0;
         setInterval(async () => {
-            // حفظ محلي دوري كل ثانية (ضمان بيانات حتى لو اللاب قفل)
+            _pollCounter++;
+
+            // حفظ محلي كل ثانية
+            try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
+
+            if (!navigator.onLine) return;
+
+            // تهيئة الاتصال لو ما اتعملتش
+            if (!sbClient) { try { await neonInit(); } catch(e) {} }
+            if (!sbClient || !neonAvailable) return;
+
+            // رفع فوري لو في pending
+            if (pendingSync) {
+                try {
+                    const snap = localStorage.getItem(DB_KEY);
+                    if (snap) {
+                        const { error } = await sbClient.from('kash_state')
+                            .upsert({ id: 1, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+                        if (!error) { pendingSync = false; setSyncStatus('ok', '✓ ' + new Date().toLocaleTimeString('ar-EG')); }
+                    }
+                } catch(e) {}
+                return; // إذا كنا نرفع، مش محتاجين نسحب في نفس الـ tick
+            }
+
+            // كل 3 ثواني: اسحب من السيرفر وشوف لو فيه تحديث من جهاز تاني
+            if (_pollCounter % 3 !== 0) return;
             try {
-                const snap = JSON.stringify(state);
-                localStorage.setItem(DB_KEY, snap);
-            } catch (e) { }
-
-            // لو فيه sync معلق وفيه اتصال، ارفع
-            if (pendingSync && navigator.onLine) {
-                try {
-                    if (!neonAvailable) await neonInit();
-                    if (neonAvailable && sbClient) {
-                        const latest = localStorage.getItem(DB_KEY);
-                        if (latest) {
-                            const { error } = await sbClient.from('kash_state').upsert(
-                                { id: 1, data: latest, updated_at: new Date().toISOString() },
-                                { onConflict: 'id' }
-                            );
-                            if (!error) {
-                                pendingSync = false;
-                                setSyncStatus('ok', '✓ تمت المزامنة ' + new Date().toLocaleTimeString('ar-EG'));
-                            }
-                        }
-                    }
-                } catch (e) { }
-            }
+                const { data, error } = await sbClient.from('kash_state')
+                    .select('data, updated_at').eq('id', 1).maybeSingle();
+                if (error || !data) return;
+                const cloudTs = new Date(data.updated_at).getTime();
+                if (cloudTs <= _lastCloudTs) return; // مفيش جديد
+                _lastCloudTs = cloudTs;
+                // السيرفر فيه بيانات أحدث من البيانات المحلية؟
+                let cloudData = data.data;
+                if (typeof cloudData === 'string') try { cloudData = JSON.parse(cloudData); } catch(e) {}
+                if (typeof cloudData === 'string') try { cloudData = JSON.parse(cloudData); } catch(e) {}
+                if (!cloudData || typeof cloudData !== 'object') return;
+                const localTs = state.lastSavedTimestamp || 0;
+                const remoteTs = cloudData.lastSavedTimestamp || 0;
+                if (remoteTs > localTs + 500) {
+                    // الجهاز التاني عنده بيانات أحدث — حدّث الشاشة
+                    state = fixState({ ...makeDefault(), ...cloudData });
+                    try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e) {}
+                    renderAll();
+                    setSyncStatus('ok', '🔄 تحديث من جهاز آخر ' + new Date().toLocaleTimeString('ar-EG'));
+                }
+            } catch(e) {}
         }, 1000);
-
-        // ===== فحص حالة الاتصال كل 30 ثانية وإعادة المزامنة إذا لزم =====
-        setInterval(async () => {
-            if (!navigator.onLine) {
-                neonAvailable = false;
-                setSyncStatus('fail', '📴 لا يوجد إنترنت');
-                return;
-            }
-            if (!neonAvailable && sbClient) {
-                try {
-                    const { error } = await sbClient.from('kash_state').select('id').eq('id', 1).maybeSingle();
-                    if (!error) {
-                        neonAvailable = true;
-                        setSyncStatus('ok', '✓ تم استعادة الاتصال');
-                        if (pendingSync) {
-                            const latest = localStorage.getItem(DB_KEY);
-                            if (latest) {
-                                await sbClient.from('kash_state').upsert(
-                                    { id: 1, data: latest, updated_at: new Date().toISOString() },
-                                    { onConflict: 'id' }
-                                );
-                                pendingSync = false;
-                                setSyncStatus('ok', '✅ تمت مزامنة البيانات المعلقة');
-                            }
-                        }
-                    }
-                } catch (e) { }
-            }
-        }, 30000);
 
         // ==================== بداية اليوم ====================
         function openNewDayFlow() {
@@ -2549,7 +2499,7 @@
             const di = document.getElementById('newDayDateInput');
             if (di) {
                 const now = new Date();
-                di.value = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+                di.value = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
             }
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -3158,21 +3108,16 @@
 
         // حساب مركزي للإحصائيات — بتتستخدم في لوحة المدير
         function calcTodayStats() {
-            // إجمالي السحب من الدرج = سحب فودافون + سحب نقدي بس (without merchant)
+            // إجمالي السحب من الدرج = سحب فودافون 💳 + سحب نقدي 💸 فقط
+            // (سحب تجار له خانة منفصلة)
             const withdrawFromDrawer = state.logs
-                .filter(l =>
-                    l.type.includes('سحب 💳') ||
-                    l.type.includes('سحب نقدي 💸') ||
-                    l.type.includes('سحب نقدي للمخزن')
-                )
+                .filter(l => l.type.includes('سحب 💳') || l.type.includes('سحب نقدي 💸'))
                 .reduce((a, l) => a + Math.round(l.net || l.amt || 0), 0);
-            // كاش للمخزن = warehouseAmt المخزن في سحب نقدي + توريد مخزن من خط
+            // كاش للمخزن = warehouseAmt في سحب نقدي + توريد مخزن من خط
             const warehouseCash =
-                state.logs.filter(l => l.type.includes('سحب نقدي 💸') && l.warehouseAmt > 0)
+                state.logs.filter(l => l.type.includes('سحب نقدي 💸') && (l.warehouseAmt || 0) > 0)
                     .reduce((a, l) => a + Math.round(l.warehouseAmt), 0) +
                 state.logs.filter(l => l.type.includes('توريد مخزن'))
-                    .reduce((a, l) => a + Math.round(l.amt), 0) +
-                state.logs.filter(l => l.type.includes('سحب نقدي للمخزن'))
                     .reduce((a, l) => a + Math.round(l.amt), 0);
             return { withdrawFromDrawer, warehouseCash };
         }
@@ -4522,7 +4467,7 @@
                         { type: 'application/json' });
                     navigator.sendBeacon && navigator.sendBeacon(url + '?on_conflict=id', blob);
                 }
-            } catch (e) { }
+            } catch(e) {}
         });
 
         window.addEventListener('load', async () => {
@@ -4876,6 +4821,37 @@
             if (inp) inp.value = '';
         }
 
+        // ===== رفع فوري بزرار Online =====
+        async function forceSyncAndNotify() {
+            const btn = document.getElementById('btnOnline');
+            if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; }
+            setSyncStatus('wait', '⬆️ جاري الرفع...');
+            try {
+                if (!sbClient) await neonInit();
+                if (!neonAvailable) await neonInit();
+                if (!neonAvailable || !sbClient) {
+                    setSyncStatus('fail', '📴 لا يوجد اتصال');
+                    showNotification('❌ لا يوجد إنترنت أو خطأ في الاتصال', 'error');
+                    return;
+                }
+                state.lastSavedTimestamp = Date.now();
+                const snap = JSON.stringify(state);
+                localStorage.setItem(DB_KEY, snap);
+                const { error } = await sbClient.from('kash_state')
+                    .upsert({ id: 1, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+                if (error) throw error;
+                pendingSync = false;
+                _lastCloudTs = Date.now();
+                setSyncStatus('ok', '✅ تم الرفع ' + new Date().toLocaleTimeString('ar-EG'));
+                showNotification('✅ تم رفع البيانات — كل الأجهزة ستتحدث خلال ثوانٍ', 'success');
+            } catch(e) {
+                setSyncStatus('fail', '❌ فشل الرفع');
+                showNotification('❌ فشل الرفع: ' + (e.message || ''), 'error');
+            } finally {
+                if (btn) { btn.style.opacity = ''; btn.disabled = false; }
+            }
+        }
+
         Object.assign(window, {
             checkAuth, logout,
             setOp, updateCalculator, syncCalcWithLine,
@@ -4897,7 +4873,7 @@
             confirmDeleteDay, doDeleteDayConfirm, cancelDeleteDay, executDeleteDay,
             checkAdminPasswordWithDelete, updateLastOpCard, animateCount,
             quickEditCash, quickEditLine, updateQuickLineDisplay, updateQuickEditUI,
-            deleteLog, adminShowNewDayBtn, calcCashWithdrawComm, calcTodayStats
+            deleteLog, adminShowNewDayBtn, calcCashWithdrawComm, calcTodayStats, forceSyncAndNotify
         });
     </script>
 </body>
